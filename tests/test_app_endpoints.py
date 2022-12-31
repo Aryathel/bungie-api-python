@@ -1,7 +1,6 @@
 import unittest
 import os
 
-import asyncio
 import dotenv
 
 import bungie_api_python
