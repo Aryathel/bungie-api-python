@@ -8,6 +8,10 @@ requests = "*"
 aiohttp = "*"
 dataclasses-json = "*"
 marshmallow = "*"
+charset-normalizer = "==3.0.1"
+async-timeout = "==4.0.2"
+idna = "==3.4"
+chardet = "==5.1.0"
 
 [dev-packages]
 python-dotenv = "*"
