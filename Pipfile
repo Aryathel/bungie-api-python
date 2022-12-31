@@ -5,8 +5,12 @@ name = "pypi"
 
 [packages]
 requests = "*"
+aiohttp = "==3.8.3"
+dataclasses-json = "*"
+marshmallow = "*"
 
 [dev-packages]
+python-dotenv = "*"
 
 [requires]
-python_version = "3.10"
+python_version = "3.11"
