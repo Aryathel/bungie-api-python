@@ -1,7 +1,7 @@
 name: bungie-api-python
 
 on:
-  - pull_request:
+  pull_request:
       types: [opened, reopened]
 
 jobs:
