@@ -9,25 +9,25 @@ This is a work in progress python wrapper for the Bungie API.
 
 ## Planned Features
 
-- [ ] Complete API coverage.
-  - [x] OAuth workflow
-    - [x] Token endpoints (access token, refresh token)
-    - [x] OAuth context for endpoints requiring it.
-  - [ ] Endpoints
-    - [x] App
-    - [x] User
-    - [ ] Content
-    - [ ] Forum
-    - [ ] GroupV2
-    - [ ] Tokens
-    - [ ] Destiny2
-    - [ ] CommunityContent
-    - [ ] Trending
-    - [ ] Fireteam
-    - [ ] Social
-    - [ ] Common
-  - [ ] Entity Models
-- [x] Async and sync client implementations.
+- :x: Complete API coverage.
+  - :heavy_check_mark: OAuth workflow
+    - :heavy_check_mark: Token endpoints (access token, refresh token)
+    - :heavy_check_mark: OAuth context for endpoints requiring it.
+  - :x: Endpoints
+    - :heavy_check_mark: App
+    - :heavy_check_mark: User
+    - :x: Content
+    - :x: Forum
+    - :x: GroupV2
+    - :x: Tokens
+    - :x: Destiny2
+    - :x: CommunityContent
+    - :x: Trending
+    - :x: Fireteam
+    - :x: Social
+    - :x: Common
+  - :x: Entity Models
+- :heavy_check_mark: Async and sync client implementations.
 
 ## Endpoints
 
