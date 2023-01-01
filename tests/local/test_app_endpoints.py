@@ -1,69 +1,34 @@
 import unittest
-import os
 
-import dotenv
-
-import bungie_api_python
-from bungie_api_python.entities.core.enums import OAuthClientType
-
-dotenv.load_dotenv()
-
-api_key = os.getenv("BUNGIE_API_KEY")
-client_id = os.getenv("BUNGIE_CLIENT_ID")
-if client_id:
-    client_id = int(client_id)
-client_secret = os.getenv("BUNGIE_CLIENT_SECRET")
-client_type = os.getenv("BUNGIE_CLIENT_TYPE")
-if client_type:
-    client_type = OAuthClientType(int(client_type))
-oauth_code = os.getenv("BUNGIE_OAUTH_CODE")
-
-print(f"https://www.bungie.net/en/OAuth/Authorize?client_id={client_id}&response_type=code")
+from tests.core_test import TestCore
 
 
-class TestAppEndpointsSync(unittest.TestCase):
+class TestAppEndpointsSync(unittest.TestCase, TestCore):
     def test_get_application_api_usage_sync(self):
-        print('RUNNING test_get_application_api_usage_sync TEST')
+        with self.run_test(is_async=False) as client:
+            client.gen_oauth_context(self.oauth_code)
 
-        client = bungie_api_python.BungieClientSync(
-            api_key=api_key,
-            client_id=client_id,
-            client_secret=client_secret,
-            client_type=client_type,
-        )
-
-        client.gen_oauth_context(oauth_code)
-
-        r = client.app.get_application_api_usage(46374)
-        print(r)
+            r = client.app.get_application_api_usage(46374)
+            print(f'\tSUCCESS: {r}')
 
     def test_get_bungie_applications_sync(self):
-        print('RUNNING test_get_bungie_applications_sync TEST')
-
-        client = bungie_api_python.BungieClientSync(
-            api_key=api_key,
-            client_id=client_id,
-            client_secret=client_secret,
-            client_type=client_type,
-        )
-
-        r = client.app.get_bungie_applications()
-        print(f'\tSUCCESS: {r}')
+        with self.run_test(is_async=False) as client:
+            r = client.app.get_bungie_applications()
+            print(f'\tSUCCESS: {r}')
 
 
-class TestAppEndpointsAsync(unittest.IsolatedAsyncioTestCase):
+class TestAppEndpointsAsync(unittest.IsolatedAsyncioTestCase, TestCore):
+    async def test_get_application_api_usage_async(self):
+        with self.run_test(is_async=True) as client:
+            await client.gen_oauth_context(self.oauth_code)
+
+            r = await client.app.get_application_api_usage(46374)
+            print(f'\tSUCCESS: {r}')
+
     async def test_get_bungie_applications_async(self):
-        print('RUNNING test_get_bungie_applications_async TEST')
-
-        client = bungie_api_python.BungieClientAsync(
-            api_key=api_key,
-            client_id=client_id,
-            client_secret=client_secret,
-            client_type=client_type,
-        )
-
-        r = await client.app.get_bungie_applications()
-        print(f'\tSUCCESS: {r}')
+        with self.run_test(is_async=True) as client:
+            r = await client.app.get_bungie_applications()
+            print(f'\tSUCCESS: {r}')
 
 
 if __name__ == "__main__":

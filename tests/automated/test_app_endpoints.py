@@ -1,23 +1,22 @@
 import unittest
-import os
 
-import bungie_api_python
-
-
-class TestAppEndpointsSync(unittest.TestCase):
-    def test_get_bungie_applications_sync(self):
-        api_key = os.getenv("BUNGIE_API_KEY")
-        client = bungie_api_python.BungieClientSync(api_key=api_key)
-
-        client.app.get_bungie_applications()
+from tests.core_test import TestCore
 
 
-class TestAppEndpointsAsync(unittest.IsolatedAsyncioTestCase):
+class TestAppEndpointsSync(unittest.TestCase, TestCore):
+    def test_get_application_api_usage_sync(self):
+        with self.run_test(is_async=False) as client:
+            client.gen_oauth_context(self.oauth_code)
+
+            client.app.get_application_api_usage(46374)
+            print(f'\tSUCCESS')
+
+
+class TestAppEndpointsAsync(unittest.IsolatedAsyncioTestCase, TestCore):
     async def test_get_bungie_applications_async(self):
-        api_key = os.getenv("BUNGIE_API_KEY")
-        client = bungie_api_python.BungieClientAsync(api_key=api_key)
-
-        await client.app.get_bungie_applications()
+        with self.run_test(is_async=True) as client:
+            await client.app.get_bungie_applications()
+            print(f'\tSUCCESS')
 
 
 if __name__ == "__main__":

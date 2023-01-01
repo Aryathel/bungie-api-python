@@ -33,13 +33,14 @@ class TestCore(abc.ABC):
         if self.client_type:
             self.client_type = OAuthClientType(int(self.client_type))
         self.oauth_code = os.getenv("BUNGIE_OAUTH_CODE")
+
+        print(f'OAUTH URL: https://www.bungie.net/en/OAuth/Authorize?client_id={self.client_id}&response_type=code')
         self._initialized = True
 
     @contextmanager
     def run_test(self, is_async: bool) -> Generator[bungie_api_python.BungieClientSync | bungie_api_python.BungieClientAsync, None, None]:
         self.initialize()
         print(f'RUNNING TEST: {sys._getframe(2).f_code.co_name}')
-        print(f'OAUTH URL: https://www.bungie.net/en/OAuth/Authorize?client_id={self.client_id}&response_type=code')
         if not is_async:
             client = bungie_api_python.BungieClientSync(
                 api_key=self.api_key,

@@ -32,5 +32,9 @@ jobs:
       - name: Test with Unittest
         env:
           BUNGIE_API_KEY: ${{ secrets.BUNGIE_API_KEY }}
+          BUNGIE_CLIENT_ID: ${{ secrets.BUNGIE_CLIENT_ID }}
+          BUNGIE_CLIENT_SECRET: ${{ secrets.BUNGIE_CLIENT_SECRET }}
+          BUNGIE_CLIENT_TYPE: ${{ secrets.BUNGIE_CLIENT_TYPE }}
+          BUNGIE_OAUTH_CODE: ${{ secrets.BUNGIE_OAUTH_CODE }}
         run: |
           pipenv run python -m unittest discover -s ./tests/automated -p 'test_*.py'
