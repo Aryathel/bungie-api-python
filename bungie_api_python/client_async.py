@@ -115,7 +115,6 @@ class BungieClientAsync(
                 auth=auth,
                 data=data,
             ) as r:
-                print(await r.json())
                 return response_type.from_dict(await r.json())
 
     async def gen_oauth_context(
