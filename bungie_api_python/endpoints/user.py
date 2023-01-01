@@ -1,6 +1,6 @@
 from ..endpoint_base import EndpointBase
-from ..entities.responses.user import GetBungieNetUserById, GetSanitizedPlatformDisplayNames, \
-    GetCredentialTypesForTargetAccount
+from ..entities.responses import GetBungieNetUserById, GetSanitizedPlatformDisplayNames, \
+    GetCredentialTypesForTargetAccount, GetAvailableThemes
 
 
 class UserEndpoints(EndpointBase, api_base='https://www.bungie.net/Platform/User', name='user'):
@@ -23,6 +23,12 @@ class UserEndpoints(EndpointBase, api_base='https://www.bungie.net/Platform/User
             requires_oauth=True,
         )
 
+    def get_available_themes(self) -> GetAvailableThemes:
+        return self.parent.get(
+            f'{self.api_base}/GetAvailableThemes/',
+            response_type=GetAvailableThemes,
+        )
+
 
 class UserEndpointsAsync(EndpointBase, api_base='https://www.bungie.net/Platform/User', name='user'):
     async def get_bungie_net_user_by_id(self, id: int) -> GetBungieNetUserById:
@@ -42,4 +48,10 @@ class UserEndpointsAsync(EndpointBase, api_base='https://www.bungie.net/Platform
             f'{self.api_base}/GetCredentialTypesForTargetAccount/{membership_id}',
             response_type=GetCredentialTypesForTargetAccount,
             requires_oauth=True,
+        )
+
+    async def get_available_themes(self) -> GetAvailableThemes:
+        return await self.parent.get(
+            f'{self.api_base}/GetAvailableThemes/',
+            response_type=GetAvailableThemes,
         )
