@@ -2,6 +2,10 @@ import unittest
 
 from tests.core_test import TestCore
 
+import dotenv
+
+dotenv.load_dotenv()
+
 
 class TestAppEndpointsSync(unittest.TestCase, TestCore):
     def test_get_application_api_usage_sync(self):
