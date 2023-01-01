@@ -1,7 +1,8 @@
 from .response import Response
 from .app import GetApplicationApiUsage, GetBungieApplications
 from .user import GetBungieNetUserById, GetSanitizedPlatformDisplayNames, GetCredentialTypesForTargetAccount, \
-    GetAvailableThemes, GetMembershipDataById, GetMembershipDataForCurrentUser, GetMembershipFromHardLinkedCredential
+    GetAvailableThemes, GetMembershipDataById, GetMembershipDataForCurrentUser, GetMembershipFromHardLinkedCredential, \
+    SearchByGlobalNamePost
 
 __all__ = [
     # Generic
@@ -19,4 +20,6 @@ __all__ = [
     'GetMembershipDataById',
     'GetMembershipDataForCurrentUser',
     'GetMembershipFromHardLinkedCredential',
+    # 'SearchByGlobalNamePrefix',
+    'SearchByGlobalNamePost',
 ]

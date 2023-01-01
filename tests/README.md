@@ -32,17 +32,17 @@ way to automate with something like a [GitHub action](/.github/workflows/test_ap
 
 ### User Endpoints
 
-| Endpoint                              | Manual              | Automated           | Comments                         |
-|---------------------------------------|---------------------|---------------------|----------------------------------|
-| GetBungieNetUserById                  | :heavy_check_mark:  | :heavy_check_mark:  |                                  |
-| GetSanitizedPlatformDisplayNames      | :heavy_check_mark:  | :heavy_check_mark:  |                                  |
-| GetCredentialTypesForTargetAccount    | :heavy_check_mark:  | :x:                 | Not automated due to OAuth flow. |
-| GetAvailableThemes                    | :heavy_check_mark:  | :heavy_check_mark:  |                                  |
-| GetMembershipDataById                 | :heavy_check_mark:  | :heavy_check_mark:  |                                  |
-| GetMembershipDataForCurrentUser       | :heavy_check_mark:  | :x:                 | Not automated due to OAuth flow. |
-| GetMembershipFromHardLinkedCredential | :heavy_check_mark:  | :heavy_check_mark:  |                                  |
-| SearchByGlobalNamePrefix              | :x:                 | :x:                 | Not yet implemented.             |
-| SearchByGlobalNamePost                | :x:                 | :x:                 | Not yet implemented.             |
+| Endpoint                              | Manual              | Automated           | Comments                                                                                               |
+|---------------------------------------|---------------------|---------------------|--------------------------------------------------------------------------------------------------------|
+| GetBungieNetUserById                  | :heavy_check_mark:  | :heavy_check_mark:  |                                                                                                        |
+| GetSanitizedPlatformDisplayNames      | :heavy_check_mark:  | :heavy_check_mark:  |                                                                                                        |
+| GetCredentialTypesForTargetAccount    | :heavy_check_mark:  | :x:                 | Not automated due to OAuth flow.                                                                       |
+| GetAvailableThemes                    | :heavy_check_mark:  | :heavy_check_mark:  |                                                                                                        |
+| GetMembershipDataById                 | :heavy_check_mark:  | :heavy_check_mark:  |                                                                                                        |
+| GetMembershipDataForCurrentUser       | :heavy_check_mark:  | :x:                 | Not automated due to OAuth flow.                                                                       |
+| GetMembershipFromHardLinkedCredential | :heavy_check_mark:  | :heavy_check_mark:  |                                                                                                        |
+| SearchByGlobalNamePrefix              | :heavy_check_mark:  | :heavy_check_mark:  | This endpoint is obsolete and will raise an error if called, it is only included for posterity's sake. |
+| SearchByGlobalNamePost                | :heavy_check_mark:  | :heavy_check_mark:  |                                                                                                        |
 
 ### Content Endpoints
 

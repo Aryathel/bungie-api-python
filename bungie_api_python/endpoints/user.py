@@ -3,6 +3,9 @@ from ..entities.core import BungieMembershipType, BungieCredentialType
 from ..entities.responses import GetBungieNetUserById, GetSanitizedPlatformDisplayNames, \
     GetCredentialTypesForTargetAccount, GetAvailableThemes, GetMembershipDataById, GetMembershipDataForCurrentUser, \
     GetMembershipFromHardLinkedCredential
+from ..entities.responses.user import SearchByGlobalNamePost
+from ..entities.user import UserSearchPrefixRequest
+from ..exceptions.core import ObsoleteEndpoint
 
 
 class UserEndpoints(EndpointBase, api_base='https://www.bungie.net/Platform/User', name='user'):
@@ -71,6 +74,31 @@ class UserEndpoints(EndpointBase, api_base='https://www.bungie.net/Platform/User
             response_type=GetMembershipFromHardLinkedCredential,
         )
 
+    def search_by_global_name_prefix(
+            self,
+            display_name_prefix: str,
+            page: int,
+    ) -> None:
+        raise ObsoleteEndpoint(
+            "This endpoint has been deprecated per the [Bungie API Docs]"
+            "(https://bungie-net.github.io/multi/operation_get_User-SearchByGlobalNamePrefix.html"
+            "#operation_get_User-SearchByGlobalNamePrefix)"
+        )
+
+    def search_by_global_name_post(
+            self,
+            display_name_prefix: str,
+            page: int,
+    ) -> SearchByGlobalNamePost:
+        return self.parent.post(
+            f'{self.api_base}/Search/GlobalName/{page}/',
+            response_type=SearchByGlobalNamePost,
+            headers={'Content-Type': 'application/json'},
+            json=UserSearchPrefixRequest(
+                displayNamePrefix=display_name_prefix
+            ).to_dict()
+        )
+
 
 class UserEndpointsAsync(EndpointBase, api_base='https://www.bungie.net/Platform/User', name='user'):
     async def get_bungie_net_user_by_id(self, id: int) -> GetBungieNetUserById:
@@ -136,4 +164,29 @@ class UserEndpointsAsync(EndpointBase, api_base='https://www.bungie.net/Platform
         return await self.parent.get(
             f'{self.api_base}/GetMembershipFromHardLinkedCredential/{credential_type.name}/{credential}/',
             response_type=GetMembershipFromHardLinkedCredential,
+        )
+
+    async def search_by_global_name_prefix(
+            self,
+            display_name_prefix: str,
+            page: int,
+    ) -> None:
+        raise ObsoleteEndpoint(
+            "This endpoint has been deprecated per the [Bungie API Docs]"
+            "(https://bungie-net.github.io/multi/operation_get_User-SearchByGlobalNamePrefix.html"
+            "#operation_get_User-SearchByGlobalNamePrefix)"
+        )
+
+    def search_by_global_name_post(
+            self,
+            display_name_prefix: str,
+            page: int,
+    ) -> SearchByGlobalNamePost:
+        return self.parent.post(
+            f'{self.api_base}/Search/GlobalName/{page}/',
+            response_type=SearchByGlobalNamePost,
+            headers={'Content-Type': 'application/json'},
+            data=UserSearchPrefixRequest(
+                displayNamePrefix=display_name_prefix
+            ).to_json()
         )

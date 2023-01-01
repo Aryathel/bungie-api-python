@@ -1,0 +1,2 @@
+class ObsoleteEndpoint(Exception):
+    pass

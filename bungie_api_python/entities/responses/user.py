@@ -5,7 +5,7 @@ from dataclasses_json import dataclass_json
 from .response import Response
 from ..config import UserTheme
 from ..user.models import GetCredentialTypesForAccountResponse
-from ..user import GeneralUser, UserMembershipData, HardLinkedUserMembership
+from ..user import GeneralUser, UserMembershipData, HardLinkedUserMembership, UserSearchResponse
 
 
 @dataclass_json
@@ -48,3 +48,9 @@ class GetMembershipDataForCurrentUser(Response):
 @dataclass(kw_only=True)
 class GetMembershipFromHardLinkedCredential(Response):
     Response: HardLinkedUserMembership
+
+
+@dataclass_json
+@dataclass(kw_only=True)
+class SearchByGlobalNamePost(Response):
+    Response: UserSearchResponse

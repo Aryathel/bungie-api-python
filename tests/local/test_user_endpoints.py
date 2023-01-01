@@ -6,6 +6,7 @@ from typing import Generator
 import dotenv
 
 import bungie_api_python
+from bungie_api_python.exceptions.core import ObsoleteEndpoint
 from tests.core_test import TestCore
 
 dotenv.load_dotenv()
@@ -54,6 +55,19 @@ class TestUserEndpointsSync(unittest.TestCase, TestCore):
                 credential=76561198119241330,
             )
             print(f'\tSUCCESS: {r}')
+    
+    def test_search_by_global_name_prefix_sync(self):
+        with self.run_test(is_async=False) as client:
+            try:
+                client.user.search_by_global_name_prefix('test', 1)
+            except Exception as e:
+                assert isinstance(e, ObsoleteEndpoint)
+                print(f'\tSUCCESS: {e}')
+
+    def test_search_by_global_name_post_sync(self):
+        with self.run_test(is_async=False) as client:
+            r = client.user.search_by_global_name_post('Mara', 0)
+            print(f'\tSUCCESS: {r}')
 
 
 class TestUserEndpointsAsync(unittest.IsolatedAsyncioTestCase, TestCore):
@@ -98,6 +112,19 @@ class TestUserEndpointsAsync(unittest.IsolatedAsyncioTestCase, TestCore):
                 credential_type='SteamId',
                 credential=76561198119241330,
             )
+            print(f'\tSUCCESS: {r}')
+
+    async def test_search_by_global_name_prefix_async(self):
+        with self.run_test(is_async=True) as client:
+            try:
+                await client.user.search_by_global_name_prefix('test', 1)
+            except Exception as e:
+                assert isinstance(e, ObsoleteEndpoint)
+                print(f'\tSUCCESS: {e}')
+
+    async def test_search_by_global_name_post_async(self):
+        with self.run_test(is_async=True) as client:
+            r = await client.user.search_by_global_name_post('Mara', 0)
             print(f'\tSUCCESS: {r}')
 
 
