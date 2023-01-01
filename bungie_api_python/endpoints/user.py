@@ -1,6 +1,7 @@
 from ..endpoint_base import EndpointBase
+from ..entities.core import BungieMembershipType
 from ..entities.responses import GetBungieNetUserById, GetSanitizedPlatformDisplayNames, \
-    GetCredentialTypesForTargetAccount, GetAvailableThemes
+    GetCredentialTypesForTargetAccount, GetAvailableThemes, GetMembershipDataById
 
 
 class UserEndpoints(EndpointBase, api_base='https://www.bungie.net/Platform/User', name='user'):
@@ -29,6 +30,19 @@ class UserEndpoints(EndpointBase, api_base='https://www.bungie.net/Platform/User
             response_type=GetAvailableThemes,
         )
 
+    def get_membership_data_by_id(
+            self,
+            membership_id: int,
+            membership_type: BungieMembershipType | int
+    ) -> GetMembershipDataById:
+        if not isinstance(membership_type, BungieMembershipType):
+            membership_type = BungieMembershipType(membership_type)
+
+        return self.parent.get(
+            f'{self.api_base}/GetMembershipsById/{membership_id}/{membership_type.value}/',
+            response_type=GetMembershipDataById,
+        )
+
 
 class UserEndpointsAsync(EndpointBase, api_base='https://www.bungie.net/Platform/User', name='user'):
     async def get_bungie_net_user_by_id(self, id: int) -> GetBungieNetUserById:
@@ -54,4 +68,17 @@ class UserEndpointsAsync(EndpointBase, api_base='https://www.bungie.net/Platform
         return await self.parent.get(
             f'{self.api_base}/GetAvailableThemes/',
             response_type=GetAvailableThemes,
+        )
+
+    async def get_membership_data_by_id(
+            self,
+            membership_id: int,
+            membership_type: BungieMembershipType | int
+    ) -> GetMembershipDataById:
+        if not isinstance(membership_type, BungieMembershipType):
+            membership_type = BungieMembershipType(membership_type)
+
+        return await self.parent.get(
+            f'{self.api_base}/GetMembershipsById/{membership_id}/{membership_type.value}/',
+            response_type=GetMembershipDataById,
         )

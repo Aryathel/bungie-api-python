@@ -8,9 +8,9 @@ This is a work in progress python wrapper for the Bungie API.
 ### Planned Features
 
 - [ ] Complete API coverage.
-  - [ ] OAuth workflow
-    - [ ] Token endpoints (access token, refresh token)
-    - [ ] OAuth context for endpoints requiring it.
+  - [x] OAuth workflow
+    - [x] Token endpoints (access token, refresh token)
+    - [x] OAuth context for endpoints requiring it.
   - [ ] Endpoints
     - [ ] App
     - [ ] User

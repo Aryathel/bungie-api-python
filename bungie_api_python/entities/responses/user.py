@@ -5,7 +5,8 @@ from dataclasses_json import dataclass_json
 from .response import Response
 from ..config import UserTheme
 from ..user.general_user import GeneralUser
-from ..user.models.get_credential_types_for_account_response import GetCredentialTypesForAccountResponse
+from ..user.models import GetCredentialTypesForAccountResponse
+from ..user import UserMembershipData
 
 
 @dataclass_json
@@ -30,3 +31,9 @@ class GetCredentialTypesForTargetAccount(Response):
 @dataclass(kw_only=True)
 class GetAvailableThemes(Response):
     Response: list[UserTheme]
+
+
+@dataclass_json
+@dataclass(kw_only=True)
+class GetMembershipDataById(Response):
+    Response: UserMembershipData

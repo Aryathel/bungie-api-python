@@ -1,6 +1,6 @@
 from .response import Response
 from .app import GetApplicationApiUsage, GetBungieApplications
-from .user import GetBungieNetUserById, GetSanitizedPlatformDisplayNames, GetCredentialTypesForTargetAccount, GetAvailableThemes
+from .user import GetBungieNetUserById, GetSanitizedPlatformDisplayNames, GetCredentialTypesForTargetAccount, GetAvailableThemes, GetMembershipDataById
 
 __all__ = [
     # Generic
@@ -15,4 +15,5 @@ __all__ = [
     'GetSanitizedPlatformDisplayNames',
     'GetCredentialTypesForTargetAccount',
     'GetAvailableThemes',
+    'GetMembershipDataById',
 ]

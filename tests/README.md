@@ -38,7 +38,7 @@ way to automate with something like a [GitHub action](/.github/workflows/test_ap
 | GetSanitizedPlatformDisplayNames      | :heavy_check_mark:  | :heavy_check_mark:  |                                    |
 | GetCredentialTypesForTargetAccount    | :heavy_check_mark:  | :x:                 | Cannot automate due to OAuth flow. |
 | GetAvailableThemes                    | :heavy_check_mark:  | :heavy_check_mark:  |                                    |
-| GetMembershipDataById                 | :x:                 | :x:                 | Not yet implemented.               |
+| GetMembershipDataById                 | :heavy_check_mark:  | :heavy_check_mark:  |                                    |
 | GetMembershipDataForCurrentUser       | :x:                 | :x:                 | Not yet implemented.               |
 | GetMembershipFromHardLinkedCredential | :x:                 | :x:                 | Not yet implemented.               |
 | SearchByGlobalNamePrefix              | :x:                 | :x:                 | Not yet implemented.               |

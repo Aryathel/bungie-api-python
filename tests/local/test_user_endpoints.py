@@ -33,6 +33,14 @@ class TestUserEndpointsSync(unittest.TestCase, TestCore):
             r = client.user.get_available_themes()
             print(f'\tSUCCESS: {r}')
 
+    def test_get_membership_data_by_id_sync(self):
+        with self.run_test(is_async=False) as client:
+            r = client.user.get_membership_data_by_id(
+                membership_id=4611686018483530949,
+                membership_type=3,
+            )
+            print(f'\tSUCCESS: {r}')
+
 
 class TestUserEndpointsAsync(unittest.IsolatedAsyncioTestCase, TestCore):
     async def test_get_bungie_net_user_by_id_async(self):
@@ -54,6 +62,14 @@ class TestUserEndpointsAsync(unittest.IsolatedAsyncioTestCase, TestCore):
     async def test_get_available_themes_async(self):
         with self.run_test(is_async=True) as client:
             r = await client.user.get_available_themes()
+            print(f'\tSUCCESS: {r}')
+
+    async def test_get_membership_data_by_id_async(self):
+        with self.run_test(is_async=True) as client:
+            r = await client.user.get_membership_data_by_id(
+                membership_id=4611686018483530949,
+                membership_type=3,
+            )
             print(f'\tSUCCESS: {r}')
 
 
