@@ -8,7 +8,7 @@ This is a work in progress python wrapper for the Bungie API.
 
 ---
 
-![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/Aryathel/bungie-api-python/test_api_endpoints_workflow.yml?style=flat-square)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/Aryathel/bungie-api-python/test_api_endpoints_workflow.yml)
 
 ---
 
@@ -33,6 +33,44 @@ This is a work in progress python wrapper for the Bungie API.
     - :x: Common
   - :x: Entity Models
 - :heavy_check_mark: Async and sync client implementations.
+
+## Quikstart
+
+A simple synchronous usage example:
+
+```python
+import bungie_api_python
+from bungie_api_python.entities.core import OAuthClientType
+
+# Anything beyond the api key is optional,
+# and only required for endpoints that use OAuth
+client = bungie_api_python.BungieClientSync(
+  api_key='your_key',
+  client_id=000,
+  client_secret='client_secret',
+  client_type=OAuthClientType.Confidential
+)
+
+# Non OAuth endpoints will work right away
+apps = client.app.get_bungie_applications()
+for app in apps.Response:
+  print(f'{app.name}: {app.status}')
+# >>> www.bungie.net: ApplicationStatus.Private
+# >>> Destiny 2 Companion (Android): ApplicationStatus.Private
+# etc...
+
+# If using OAuth, passing in an authorization code will perform the token
+# exchange process, and refresh the token as necessary.
+client.gen_oauth_context(code='your auth code')
+
+user = client.user.get_membership_data_for_current_user()
+print(user.Response.bungieNetUser.uniqueName)
+# >>> "Aryathel#7877"
+```
+
+The same process can be used for an asynchronous client.
+Simply create a `BungieClientAsync` instance rather than a `BungeClientSync`
+instance, then `await` your calls (`await client.gen_oauth_context`, `await client.user.get_bungie_applications`, etc.).
 
 ## Endpoints
 
