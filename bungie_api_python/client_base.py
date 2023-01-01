@@ -85,6 +85,7 @@ class ClientBase(abc.ABC):
             params: Optional[dict[str, Any]] = None,
             headers: Optional[dict[str, Any]] = None,
             data: Optional[dict[str, Any]] = None,
+            json: Optional[dict[str, any]] = None,
             requires_oauth: bool = False,
             auth: aiohttp.BasicAuth = None,
     ) -> R:
@@ -98,6 +99,7 @@ class ClientBase(abc.ABC):
             params: Optional[dict[str, Any]] = None,
             headers: Optional[dict[str, Any]] = None,
             data: Optional[dict[str, Any]] = None,
+            json: Optional[dict[str, any]] = None,
             requires_oauth: bool = False,
             auth: HTTPBasicAuth = None,
     ) -> R:
@@ -112,6 +114,7 @@ class ClientBase(abc.ABC):
             params: Optional[dict[str, Any]] = None,
             headers: Optional[dict[str, Any]] = None,
             data: Optional[dict[str, Any]] = None,
+            json: Optional[dict[str, any]] = None,
             requires_oauth: bool = False,
             auth: aiohttp.BasicAuth = None,
     ) -> R:
@@ -125,6 +128,7 @@ class ClientBase(abc.ABC):
             params: Optional[dict[str, Any]] = None,
             headers: Optional[dict[str, Any]] = None,
             data: Optional[dict[str, Any]] = None,
+            json: Optional[dict[str, any]] = None,
             requires_oauth: bool = False,
             auth: HTTPBasicAuth = None,
     ) -> R:

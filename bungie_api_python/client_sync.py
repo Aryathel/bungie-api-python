@@ -91,6 +91,7 @@ class BungieClientSync(
             params: Optional[dict[str, Any]] = None,
             headers: Optional[dict[str, Any]] = None,
             data: Optional[dict[str, Any]] = None,
+            json: Optional[dict[str, any]] = None,
             requires_oauth: bool = False,
             auth: HTTPBasicAuth = None,
     ) -> R:
@@ -101,6 +102,7 @@ class BungieClientSync(
                 params=params,
                 auth=auth,
                 data=data,
+                json=json,
             )
             r.raise_for_status()
             return response_type.from_dict(r.json())
@@ -112,6 +114,7 @@ class BungieClientSync(
             params: Optional[dict[str, Any]] = None,
             headers: Optional[dict[str, Any]] = None,
             data: Optional[dict[str, Any]] = None,
+            json: Optional[dict[str, any]] = None,
             requires_oauth: bool = False,
             auth: HTTPBasicAuth = None,
     ) -> R:
@@ -122,6 +125,7 @@ class BungieClientSync(
                 params=params,
                 auth=auth,
                 data=data,
+                json=json,
             )
             r.raise_for_status()
             return response_type.from_dict(r.json())

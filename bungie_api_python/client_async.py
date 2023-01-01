@@ -84,6 +84,7 @@ class BungieClientAsync(
             params: Optional[dict[str, Any]] = None,
             headers: Optional[dict[str, Any]] = None,
             data: Optional[dict[str, Any]] = None,
+            json: Optional[dict[str, any]] = None,
             requires_oauth: bool = False,
             auth: aiohttp.BasicAuth = None,
     ) -> R:
@@ -94,6 +95,7 @@ class BungieClientAsync(
                 params=params,
                 auth=auth,
                 data=data,
+                json=json,
             ) as r:
                 return response_type.from_dict(await r.json())
 
@@ -104,6 +106,7 @@ class BungieClientAsync(
             params: Optional[dict[str, Any]] = None,
             headers: Optional[dict[str, Any]] = None,
             data: Optional[dict[str, Any]] = None,
+            json: Optional[dict[str, any]] = None,
             requires_oauth: bool = False,
             auth: aiohttp.BasicAuth = None,
     ) -> R:
@@ -114,6 +117,7 @@ class BungieClientAsync(
                 params=params,
                 auth=auth,
                 data=data,
+                json=json,
             ) as r:
                 return response_type.from_dict(await r.json())
 

@@ -8,11 +8,13 @@ from ..core import BungieMembershipType
 
 @dataclass_json
 @dataclass(kw_only=True)
-class UserInfoCard:
+class GroupUserInfoCard:
+    LastSeenDisplayName: str
+    LastSeenDisplayNameType: BungieMembershipType
     supplementalDisplayName: Optional[str] = field(default=None)
-    iconPath: Optional[str] = field(default=None)
-    crossSaveOverride: Optional[BungieMembershipType] = field(default=None)
-    applicableMembershipTypes: Optional[list[BungieMembershipType]] = field(default=None)
+    iconPath: str
+    crossSaveOverride: BungieMembershipType
+    applicableMembershipTypes: list[BungieMembershipType]
     isPublic: bool
     membershipType: BungieMembershipType
     membershipId: int
