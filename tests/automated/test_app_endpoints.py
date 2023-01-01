@@ -6,9 +6,7 @@ from tests.core_test import TestCore
 class TestAppEndpointsSync(unittest.TestCase, TestCore):
     def test_get_application_api_usage_sync(self):
         with self.run_test(is_async=False) as client:
-            client.gen_oauth_context(self.oauth_code)
-
-            client.app.get_application_api_usage(46374)
+            r = client.app.get_bungie_applications()
             print(f'\tSUCCESS')
 
 

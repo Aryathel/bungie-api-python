@@ -1,6 +1,16 @@
 # Tests
 
 This package contains a test suite to test what little I can programmatically.
+This document will keep track of what endpoints I have been able to test and use successfully in both
+a manual, local dev environment and a standardized GitHub action driven test environment.
+Another note, any of the test statuses for either local or automated tests apply to both synchronous
+and asynchronous client implementations.
+
+For further context into what a test actually is, it is rather simple:
+Each test simply calls its respective endpoint, with parameters utilizing my own profile and OAuth,
+and then deserializes the response to its own model. Nothing is done with the response after receiving it.
+
+
 Many of the endpoints require OAuth verification, which there is no consistent
 way to automate with something like a [GitHub action](/.github/workflows/test_api_endpoints_workflow.yml).
 
