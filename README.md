@@ -4,8 +4,13 @@ This is a work in progress python wrapper for the Bungie API.
 
 [MIT License](LICENSE.md)
 
-[Test Status](tests/README.md)
+[Test Information](tests/README.md)
 
+---
+
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/Aryathel/bungie-api-python/test_api_endpoints_workflow.yml?style=flat-square)
+
+---
 
 ## Planned Features
 
