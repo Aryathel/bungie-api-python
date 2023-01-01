@@ -4,6 +4,8 @@ This is a work in progress python wrapper for the Bungie API.
 
 [MIT License](LICENSE.md)
 
+[Test Status](tests/README.md)
+
 
 ### Planned Features
 
