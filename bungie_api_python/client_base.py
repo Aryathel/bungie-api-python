@@ -4,14 +4,16 @@ from contextlib import contextmanager, asynccontextmanager
 from typing import Generator, overload, TypeVar, Type, Optional, Any
 
 import requests
+from requests.auth import HTTPBasicAuth
 import aiohttp
 
 from .endpoint_base import EndpointBase
+from .entities.core import AccessToken
+from .entities.core.enums import OAuthClientType
 from .entities.responses import Response
 
 # --- TYPING -----------------------------------------------------------------------------------------------------------
-R = TypeVar('R', bound=Response)
-SessionType = TypeVar('SessionType', requests.Session, aiohttp.ClientSession)
+R = TypeVar('R', bound=Response | AccessToken)
 EndpointType = TypeVar('EndpointType', bound=EndpointBase)
 
 
@@ -22,19 +24,34 @@ class ClientBase(abc.ABC):
 
     This class manages connection sessions across the multitude of endpoints in use.
     """
-    endpoints: list[EndpointType]
-    api_key: str
-    _session: Optional[SessionType]
+    _endpoints: list[EndpointType]
 
-    def __init__(self, api_key: str) -> None:
+    api_key: str
+    client_id: int
+    client_type: OAuthClientType
+
+    _access_token: Optional[AccessToken]
+
+    def __init__(
+            self,
+            api_key: str,
+            client_type: OAuthClientType = OAuthClientType.Public,
+            client_id: int = None,
+            client_secret: str = None,
+    ) -> None:
         """Instantiates the client class and all endpoint classes.
 
         :param api_key: The Bungie API key that will be used when making requests.
         """
         self.api_key = api_key
-        self._session = None
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.client_type = client_type
 
-        for endpoint in self.endpoints:
+        self._session = None
+        self._access_token = None
+
+        for endpoint in self._endpoints:
             setattr(self, endpoint.name, endpoint(self))
 
     def __init_subclass__(cls, endpoints: list[EndpointType] = None, **kwargs) -> None:
@@ -46,17 +63,17 @@ class ClientBase(abc.ABC):
             raise ValueError(
                 "At least one endpoint collection must be provided for the client to function."
             )
-        cls.endpoints = endpoints
+        cls._endpoints = endpoints
 
     @abc.abstractmethod
     @overload
     @asynccontextmanager
-    async def session(self) -> Generator[aiohttp.ClientSession, None, None]:
+    async def session(self, with_oauth: bool) -> Generator[aiohttp.ClientSession, None, None]:
         ...
 
     @abc.abstractmethod
     @contextmanager
-    def session(self) -> Generator[requests.Session, None, None]:
+    def session(self, with_oauth: bool) -> Generator[requests.Session, None, None]:
         pass
 
     @abc.abstractmethod
@@ -67,6 +84,9 @@ class ClientBase(abc.ABC):
             response_type: Type[R] = Response,
             params: Optional[dict[str, Any]] = None,
             headers: Optional[dict[str, Any]] = None,
+            data: Optional[dict[str, Any]] = None,
+            requires_oauth: bool = False,
+            auth: aiohttp.BasicAuth = None,
     ) -> R:
         ...
 
@@ -77,6 +97,66 @@ class ClientBase(abc.ABC):
             response_type: Type[R] = Response,
             params: Optional[dict[str, Any]] = None,
             headers: Optional[dict[str, Any]] = None,
+            data: Optional[dict[str, Any]] = None,
+            requires_oauth: bool = False,
+            auth: HTTPBasicAuth = None,
     ) -> R:
+        pass
+
+    @abc.abstractmethod
+    @overload
+    async def post(
+            self,
+            url: str,
+            response_type: Type[R] = Response,
+            params: Optional[dict[str, Any]] = None,
+            headers: Optional[dict[str, Any]] = None,
+            data: Optional[dict[str, Any]] = None,
+            requires_oauth: bool = False,
+            auth: aiohttp.BasicAuth = None,
+    ) -> R:
+        ...
+
+    @abc.abstractmethod
+    def post(
+            self,
+            url: str,
+            response_type: Type[R] = Response,
+            params: Optional[dict[str, Any]] = None,
+            headers: Optional[dict[str, Any]] = None,
+            data: Optional[dict[str, Any]] = None,
+            requires_oauth: bool = False,
+            auth: HTTPBasicAuth = None,
+    ) -> R:
+        pass
+
+    @abc.abstractmethod
+    @overload
+    async def gen_oauth_context(
+            self,
+            code: str
+    ) -> None:
+        ...
+
+    @abc.abstractmethod
+    def gen_oauth_context(
+            self,
+            code: str
+    ) -> None:
+        pass
+
+    @abc.abstractmethod
+    @overload
+    async def set_oauth_context(
+            self,
+            access_token: AccessToken
+    ) -> None:
+        ...
+
+    @abc.abstractmethod
+    def set_oauth_context(
+            self,
+            access_token: AccessToken
+    ) -> None:
         pass
 

@@ -12,3 +12,9 @@ class BungieMembershipType(Enum):
     TigerDemon = 10
     BungieNext = 254
     All = -1
+
+
+class OAuthClientType(Enum):
+    NotApplicable = 0
+    Public = 1
+    Confidential = 2
