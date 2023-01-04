@@ -11,7 +11,7 @@ EnumType = TypeVar('EnumType', bound=Enum | Flag)
 
 def datetime_field_decoder(st_str: str) -> datetime:
     if st_str:
-        return datetime.fromisoformat(st_str.strip('Z').split('.')[0])
+        return datetime.fromisoformat(st_str.upper().strip('Z').split('.')[0])
 
 
 def datetime_field_encoder(dt: datetime) -> str:

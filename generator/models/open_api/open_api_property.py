@@ -21,11 +21,16 @@ class OpenAPIProperty:
     x_enum_values: Optional[list[OpenAPIEnumValue]] = field(default=None, metadata=config(field_name='x-enum-values'))
     items: Optional[OpenAPIItem] = field(default=None)
     x_enum_reference: Optional[OpenAPIReference] = field(default=None, metadata=config(field_name='x-enum-reference'))
+    additionalProperties: Optional['OpenAPIProperty'] = field(default=None)
 
     @property
     def is_ref(self) -> bool:
         return self.ref is not None
 
     @property
-    def is_enum_property(self) -> bool:
+    def is_enum(self) -> bool:
+        return self.x_enum_values is not None
+
+    @property
+    def is_enum_reference(self) -> bool:
         return self.x_enum_reference is not None

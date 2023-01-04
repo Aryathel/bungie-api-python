@@ -20,5 +20,5 @@ class OpenAPIItem:
         return self.ref is not None
 
     @property
-    def is_enum(self) -> bool:
+    def is_enum_reference(self) -> bool:
         return self.x_enum_reference is not None

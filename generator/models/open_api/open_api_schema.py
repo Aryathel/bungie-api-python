@@ -43,5 +43,9 @@ class OpenAPISchema:
     example: Optional[Any] = field(default=None)
 
     @property
+    def is_object(self) -> bool:
+        return self.type == 'object'
+
+    @property
     def is_enum(self) -> bool:
         return self.x_enum_values is not None

@@ -1,15 +1,14 @@
 import os
-import re
 
 import requests
 
-from generator.models.enums import ImportType, PropertyType
-from generator.models.open_api.open_api_schema import OpenAPISchema
-from generator.models.open_api.open_api_spec import OpenAPISpec
+from .utils.str_utils import StringUtils
+from .models.class_property import ClassProperty
+from .models.entity_import import EntityImport, EntityImportCollection
+from .models.enums import ImportType, PropertyType, PropertyFormat
+from .models.open_api.open_api_schema import OpenAPISchema
+from .models.open_api.open_api_spec import OpenAPISpec
 
-
-ImportD = dict[str, ImportType | list[str]]
-ImportT = dict[str, dict[str, ImportD]]
 
 open_api_spec = "https://raw.githubusercontent.com/Bungie-net/api/master/openapi-2.json"
 
@@ -20,18 +19,31 @@ class APIGenerator:
     max_line_length = 120
     generated_path = './generated'
     entities_path_name = 'entities'
+    utils_path_name = 'utils'
     file_extension = '.py'
 
-    default_entity_imports: ImportT = {
-        'dataclasses': {
-            'type': ImportType.stdlib,
-            'imports': ['dataclass'],
-        },
-        'dataclasses_json': {
-            'type': ImportType.external,
-            'imports': ['dataclass_json'],
-        },
-    }
+    readme_file = 'README.md'
+    datetime_utils_file = 'datetime_utils'
+    enum_utils_file = 'enum_utils'
+
+    default_entity_imports = EntityImportCollection([
+        EntityImport(
+            name='dataclasses',
+            type=ImportType.stdlib,
+            imports=['dataclass', 'field'],
+        ),
+        EntityImport(
+            name='dataclasses_json',
+            type=ImportType.external,
+            imports=['dataclass_json']
+        ),
+        EntityImport(
+            name='typing',
+            type=ImportType.stdlib,
+            imports=['Optional']
+        )
+    ])
+
     default_entity_decorators = [
         '@dataclass_json',
         '@dataclass(kw_only=True)',
@@ -48,52 +60,7 @@ class APIGenerator:
             return OpenAPISpec.from_dict(r.json())
 
     @staticmethod
-    def camel_to_snake(inp: str) -> str:
-        tmp = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', inp)
-        tmp2 = re.sub('([a-z0-9])([A-Z])', r'\1_\2', tmp).lower()
-        return tmp2
-
-    @classmethod
-    def split_text_for_wrapping(cls, inp: str, prefix_length: int = 0) -> list[str]:
-        lines = []
-        inp = inp.split('\n')
-        for line in inp:
-            if len(line) + prefix_length > cls.max_line_length:
-                rind = line.rindex(' ')
-                while rind + prefix_length > cls.max_line_length:
-                    rind = line.rindex(' ', 0, rind)
-                lines.append(line[:rind])
-                lines += cls.split_text_for_wrapping(line[rind+1:], prefix_length)
-            else:
-                lines.append(line)
-        return lines
-
-    @classmethod
-    def gen_comment(cls, inp: str, depth: int = 0) -> str:
-        comment = ''
-        for line in cls.split_text_for_wrapping(inp, len(f'{cls.indent*depth}# ')):
-            if comment:
-                comment += '\n'
-            comment += f'{cls.indent*depth}# {line}'
-        return comment
-
-    @classmethod
-    def gen_docstring(cls, body: str, depth: int = 0) -> str:
-        comment = f'{cls.indent * depth}"""'
-        for line in cls.split_text_for_wrapping(body, len(cls.indent * depth)):
-            if comment:
-                comment += '\n'
-            comment += f'{cls.indent * depth}{line}'
-        comment += f'\n{cls.indent*depth}"""'
-        return comment
-
-    @classmethod
-    def gen_line_break_comment(cls, inp: str, depth: int = 0) -> str:
-        prefix = f'{cls.indent * depth}# --- '
-        return f'{prefix}{inp + " ":-<{cls.max_line_length - len(prefix)}}'
-
-    @staticmethod
-    def gen_import(pkg: str, imp: list[str] = None, relative: bool = False, depth: int = 0) -> str:
+    def gen_import(pkg: str, imp: list[str] = None, relative: bool = False) -> str:
         if relative:
             pkg = f'.{pkg}'
 
@@ -110,81 +77,40 @@ class APIGenerator:
             return '\n'.join(f'{cls.indent * depth}{l}' for l in cls.default_entity_decorators)
 
     @classmethod
-    def entity_imports(cls, imp_collection: ImportT = None) -> str:
-        imports = {}
+    def gen_import_from_ref(cls, path: str, ref: str) -> tuple[EntityImport, str]:
+        depth = path.count('.')
+        cur = path.split('.')[-1]
+        ref = ref.split('/')[-1]
+        name = ref
+        split = name.split('.')
+        path = '.'.join(StringUtils.camel_to_snake(i) for i in split)
+        cls_name = split[-1]
 
-        for package, imp in cls.default_entity_imports.items():
-            if not imp['type'] in imports:
-                imports[imp['type']] = []
-            imp_str = cls.gen_import(
-                package,
-                imp['imports'] if 'imports' in imp else None,
-                imp['type'] == ImportType.internal
-            )
-            imports[imp['type']].append(imp_str)
+        imp = EntityImport(
+            name=f'{"."*depth}{path}',
+            type=ImportType.relative,
+            imports=[cls_name],
+            self_ref=cls_name == cur,
+        )
 
-        if imp_collection:
-            for package, imp in imp_collection.items():
-                if not imp['type'] in imports:
-                    imports[imp['type']] = []
-                imp_str = cls.gen_import(
-                    package,
-                    imp['imports'] if 'imports' in imp else None,
-                    imp['type'] == ImportType.internal
-                )
-                imports[imp['type']].append(imp_str)
+        if cls_name == cur:
+            cls_name = f'\'{cls_name}\''
 
-        output = ""
-        if ImportType.stdlib in imports:
-            output += cls.gen_line_break_comment("STANDARD LIBRARY IMPORTS")
-            output += '\n'
-            output += '\n'.join(imports[ImportType.stdlib])
-            output += '\n\n'
-        if ImportType.external in imports:
-            output += cls.gen_line_break_comment("3RD PARTY LIBRARY IMPORTS")
-            output += '\n'
-            output += '\n'.join(imports[ImportType.external])
-            output += '\n\n'
-        if ImportType.internal in imports:
-            output += cls.gen_line_break_comment("LOCAL LIBRARY IMPORTS")
-            output += '\n'
-            output += '\n'.join(imports[ImportType.internal])
-            output += '\n\n'
-        if ImportType.relative in imports:
-            output += cls.gen_line_break_comment("INTERNAL LIBRARY IMPORTS")
-            output += '\n'
-            output += '\n'.join(imports[ImportType.relative])
-            output += '\n\n'
-
-        return output
-
-    @classmethod
-    def gen_import_from_ref(cls, ref: str) -> ImportD:
-        ref = ref.split('/')[1:]
-
-        if ref[0] == 'definitions':
-            name = ref[1]
-            split = name.split('.')
-            path = '.'.join(cls.camel_to_snake(i) for i in split)
-            cls_name = split[-1]
-            imports = {
-                'type': ImportType.internal,
-                'imports': [cls_name],
-                'path': f'entities.{path}'
-            }
-
-            return imports
+        return imp, cls_name
 
     @classmethod
     def process_namespace(cls, path: str) -> tuple[str, str]:
         if '.' in path:
-            key = [cls.camel_to_snake(n) for n in path.split('.')]
+            key = [StringUtils.camel_to_snake(n) for n in path.split('.')]
         else:
-            key = cls.camel_to_snake(path)
+            key = StringUtils.camel_to_snake(path)
 
         entity_base = os.path.join(cls.generated_path, cls.entities_path_name)
         if not os.path.exists(cls.generated_path):
             os.mkdir(cls.generated_path)
+        if not os.path.exists(os.path.join(cls.generated_path, '__init__.py')):
+            with open(os.path.join(cls.generated_path, '__init__.py'), 'w+') as init:
+                init.write('')
         if not os.path.exists(entity_base):
             os.mkdir(entity_base)
         if not os.path.exists(os.path.join(entity_base, '__init__.py')):
@@ -196,6 +122,9 @@ class APIGenerator:
                 entity_base = os.path.join(entity_base, p)
                 if not os.path.exists(entity_base):
                     os.mkdir(entity_base)
+                if not os.path.exists(os.path.join(entity_base, '__init__.py')):
+                    with open(os.path.join(entity_base, '__init__.py'), 'w+') as init:
+                        init.write('')
             file = os.path.join(entity_base, key[-1]) + cls.file_extension
         else:
             file = os.path.join(entity_base, key) + cls.file_extension
@@ -213,36 +142,154 @@ class APIGenerator:
                 return f'class {class_name}({", ".join(inheritance)}:'
 
     @classmethod
-    def generate_model_properties(cls, entity: OpenAPISchema) -> tuple[ImportT]:
-        imports = {}
-        for k, prop in entity.properties.items():
-            prop_type = PropertyType(prop.type)
+    def generate_model_properties(
+            cls,
+            path: str,
+            entity: OpenAPISchema
+    ) -> tuple[EntityImportCollection, list[ClassProperty]]:
+        imports = EntityImportCollection()
+        properties = []
+        if entity.properties:
+            for k, prop in entity.properties.items():
+                prop_type = PropertyType(prop.type)
+                fmt = PropertyFormat(prop.format)
 
-            if prop_type == PropertyType.array:
-                if prop.items.is_ref:
-                    array_item_type = prop.items.ref
-                    imp = cls.gen_import_from_ref(array_item_type)
-                    if not imp['path'] in imports:
-                        imports[imp['path']] = {
-                            'type': imp['type'],
-                            'imports': imp['imports']
-                        }
+                if prop_type == PropertyType.array:
+                    if prop.items.is_ref:
+                        array_item_type = prop.items.ref
+                        imp, ref_name = cls.gen_import_from_ref(path, array_item_type)
+                        imports.add_import(imp)
+                        properties.append(ClassProperty(
+                            name=k,
+                            type=ref_name,
+                            optional=True,
+                            list=True,
+                            comment=prop.description,
+                        ))
+                    elif prop.items.is_enum_reference:
+                        imp, cls_name = cls.gen_import_from_ref(path, prop.items.x_enum_reference.ref)
+                        imports.add_import(imp)
+                        properties.append(ClassProperty(
+                            name=k,
+                            type=cls_name,
+                            optional=True,
+                            comment=prop.description,
+                            list=True,
+                        ))
                     else:
-                        for i in imp['imports']:
-                            if i not in imports[imp['path']]['imports']:
-                                imports[imp['path']]['imports'].append(imp['imports'])
-                    print(k, prop_type, array_item_type, imp)
-                elif prop.items.is_enum:
-                    pass
+                        print(f'UNHANDLED ARRAY PROPERTY: {path} - {k} - {prop}')
+                elif prop_type == PropertyType.string:
+                    if fmt == PropertyFormat.datetime:
+                        imports.add_import(EntityImport(
+                            name='datetime',
+                            type=ImportType.stdlib,
+                            imports=['datetime']
+                        ))
+                        imports.add_import(EntityImport(
+                            name=f'{"."*(path.count(".")+1)}{cls.utils_path_name}.{cls.datetime_utils_file}',
+                            type=ImportType.relative,
+                            imports=['DATETIME_META']
+                        ))
+                        properties.append(ClassProperty(
+                            name=k,
+                            type='datetime',
+                            optional=True,
+                            comment=prop.description,
+                        ))
+                    elif fmt == PropertyFormat.none:
+                        properties.append(ClassProperty(
+                            name=k,
+                            type='str',
+                            optional=True,
+                            comment=prop.description,
+                        ))
+                    else:
+                        print(f'UNHANDLED STRING FORMAT: {path} - {k} - {prop}')
+                elif prop_type == PropertyType.number:
+                    if fmt == PropertyFormat.double:
+                        properties.append(ClassProperty(
+                            name=k,
+                            type='float',
+                            optional=True,
+                            comment=prop.description,
+                        ))
+                elif prop_type == PropertyType.integer:
+                    if not prop.is_enum_reference:
+                        properties.append(ClassProperty(
+                            name=k,
+                            type='int',
+                            optional=True,
+                            comment=prop.description,
+                        ))
+                    else:
+                        imp, cls_name = cls.gen_import_from_ref(path, prop.x_enum_reference.ref)
+                        imports.add_import(imp)
+                        imports.add_import(EntityImport(
+                            name=f'{"."*(path.count(".")+1)}{cls.utils_path_name}.{cls.enum_utils_file}',
+                            type=ImportType.relative,
+                            imports=['ENUM_META']
+                        ))
+                        properties.append(ClassProperty(
+                            name=k,
+                            type=cls_name,
+                            optional=True,
+                            comment=prop.description,
+                            is_enum=True
+                        ))
+                elif prop_type == PropertyType.boolean:
+                    properties.append(ClassProperty(
+                        name=k,
+                        type='bool',
+                        optional=True,
+                        comment=prop.description,
+                    ))
+                elif prop_type == PropertyType.object:
+                    if prop.additionalProperties and prop.additionalProperties.is_ref:
+                        imp, cls_name = cls.gen_import_from_ref(path, prop.additionalProperties.ref)
+                        imports.add_import(imp)
+                        properties.append(ClassProperty(
+                            name=k,
+                            type=cls_name,
+                            optional=True,
+                            comment=prop.description,
+                        ))
+                    elif prop.additionalProperties and prop.additionalProperties.type == PropertyType.string.value:
+                        properties.append(ClassProperty(
+                            name=k,
+                            type='dict[str, str]',
+                            optional=True,
+                            comment=prop.description,
+                        ))
+                    else:
+                        print(f'UNHANDLED OBJECT PROPERTY TYPE: {path} - {k} - {prop}')
+                elif prop.is_ref:
+                    imp, cls_name = cls.gen_import_from_ref(path, prop.ref)
+                    imports.add_import(imp)
+                    properties.append(ClassProperty(
+                        name=k,
+                        type=cls_name,
+                        optional=True,
+                        comment=prop.description,
+                    ))
+                else:
+                    print(f'UNHANDLED PROPERTY TYPE: {path} - {k} - {prop_type}')
+        else:
+            print(f'ENTITY HAS NO PROPERTIES: {path}')
 
-        return imports,
+        return imports, properties
 
     @classmethod
-    def generate_class(cls, file: str, class_name: str, entity: OpenAPISchema) -> None:
-        imports, = cls.generate_model_properties(entity)
+    def generate_class(cls, file: str, class_name: str, qualified_class_name: str, entity: OpenAPISchema) -> None:
+        default_imports = cls.default_entity_imports.copy()
+
+        imports, properties = cls.generate_model_properties(qualified_class_name, entity)
+
+        default_imports.add_collection(imports)
 
         # Handle necessary imports
-        body = [cls.entity_imports(imports)]
+        body = [default_imports.formatted_imports]
+
+        body.append(StringUtils.gen_line_break_comment('MODEL DEFINITION'))
 
         # Handle the class decorators
         body.append(cls.entity_decorators())
@@ -252,11 +299,14 @@ class APIGenerator:
 
         # Handle the class description as a docstring
         if entity.description:
-            body.append(cls.gen_docstring(entity.description, depth=1))
+            body.append(StringUtils.gen_docstring(entity.description, depth=1))
 
         # Attach the class body.
         # TODO: Implement the actual class body.
-        body.append(cls.indent + 'pass')
+        if not properties:
+            body.append(cls.indent + 'pass')
+        else:
+            body.append('\n'.join(f'{p.field_definition}' for p in properties))
 
         # Line break at the end of the file.
         body.append('')
@@ -271,43 +321,132 @@ class APIGenerator:
     def gen_entities(self) -> None:
         self.registry = {}
 
-        count = 2
+        # Ensure that the necessary folders exist.
+        count = 2000
         for k, entity in self.spec.definitions.items():
             if count == 0:
                 break
             file, class_name = self.process_namespace(k)
-            print(
-                f'NAMESPACE PROCESSED:',
-                f'  TYPE: {"Enum" if entity.is_enum else "Model"}',
-                f'  NAME: {k}',
-                f'  FILE: {file}',
-                sep='\n'
-            )
             self.registry[k] = {
                 'file': file,
                 'class': class_name,
             }
             count -= 1
 
-        count = 2
+        # Generate the entity classes.
+        count = 2000
         for k, entity in self.spec.definitions.items():
             if count == 0:
                 break
-            if not entity.is_enum:
+            if entity.is_object:
                 self.generate_class(
                     self.registry[k]['file'],
                     self.registry[k]['class'],
+                    k,
                     entity
                 )
-            else:
+            elif entity.is_enum:
                 self.generate_enum(
                     self.registry[k]['file'],
                     self.registry[k]['class'],
                     entity
                 )
+            else:
+                print(f'UNHANDLED ENTITY: {k}')
             count -= 1
+
+    def gen_readme(self) -> None:
+        content = f'# {self.spec.info.title} - {self.spec.info.version}'
+        content += '\n\n'
+        content += '\n'.join(StringUtils.split_text_for_wrapping(self.spec.info.description))
+        content += '\n\n'
+        content += '### Resources'
+        content += '\n\n'
+        content += f'- [Terms of Service]({self.spec.info.termsOfService})'
+        content += '\n'
+        content += f'- Contact: [{self.spec.info.contact.name}](mailto:{self.spec.info.contact.email})'
+        content += '\n'
+        content += f'- Github: {self.spec.info.contact.url}'
+        content += '\n'
+        content += f'- License: [{self.spec.info.license.name}]({self.spec.info.license.url})'
+
+        if not os.path.exists(self.generated_path):
+            os.mkdir(self.generated_path)
+        with open(os.path.join(self.generated_path, self.readme_file), 'w+') as readme:
+            readme.write(content)
+
+    def gen_utils(self) -> None:
+        # Ensure path and default files exist.
+        if not os.path.exists(self.generated_path):
+            os.mkdir(self.generated_path)
+        if not os.path.exists(os.path.join(self.generated_path, self.utils_path_name)):
+            os.mkdir(os.path.join(self.generated_path, self.utils_path_name))
+        if not os.path.exists(os.path.join(self.generated_path, self.utils_path_name, '__init__.py')):
+            with open(os.path.join(self.generated_path, self.utils_path_name, '__init__.py'), 'w+') as f:
+                f.write('')
+
+        # Write datetime utils
+        with open(
+                os.path.join(self.generated_path, self.utils_path_name, self.datetime_utils_file + self.file_extension),
+                'w+'
+        ) as f:
+            # String Util Imports
+            imports = EntityImportCollection([
+                EntityImport(name='datetime', type=ImportType.stdlib, imports=['datetime']),
+                EntityImport(name='dataclasses_json', type=ImportType.external, imports=['config']),
+                EntityImport(name='marshmallow', type=ImportType.external, imports=['fields'])
+            ])
+
+            content = imports.formatted_imports
+
+            # Datetime decoder from string
+            content += '\ndef datetime_field_decoder(st_str: str) -> datetime:\n'
+            content += StringUtils.indent_str('if st_str:\n', 1)
+            content += StringUtils.indent_str("return datetime.fromisoformat(st_str.upper().strip('Z').split('.')[0])\n", 2)
+            content += '\n\n'
+
+            # Datetime encoder to string
+            content += 'def datetime_field_encoder(dt: datetime) -> str:\n'
+            content += StringUtils.indent_str('if dt:\n', 1)
+            content += StringUtils.indent_str("return dt.isoformat() + '.00Z'\n", 2)
+            content += '\n\n'
+
+            # Datetime metadata
+            content += 'DATETIME_META = config(\n'
+            content += StringUtils.indent_str('encoder=datetime_field_encoder,\n', 1)
+            content += StringUtils.indent_str('decoder=datetime_field_decoder,\n', 1)
+            content += StringUtils.indent_str('mm_field=fields.DateTime(format=\'iso\')\n', 1)
+            content += ')\n\n'
+
+            f.write(content)
+
+        with open(
+                os.path.join(self.generated_path, self.utils_path_name, self.enum_utils_file + self.file_extension),
+                'w+'
+        ) as f:
+            # Enum util imports
+            imports = EntityImportCollection([
+                EntityImport(name='enum', type=ImportType.stdlib, imports=['Enum']),
+                EntityImport(name='typing', type=ImportType.stdlib, imports=['Any']),
+                EntityImport(name='dataclasses_json', type=ImportType.external, imports=['config'])
+            ])
+
+            content = imports.formatted_imports
+            content += '\n'
+
+            # Enum encoder
+            content += 'def enum_encoder(enm: Enum) -> Any:\n'
+            content += StringUtils.indent_str('return enm.value\n', 1)
+            content += '\n\n'
+
+            # Enum metadata
+            content += 'ENUM_META = config(encoder=enum_encoder)\n'
+
+            f.write(content)
 
 
 if __name__ == "__main__":
     generator = APIGenerator()
     generator.gen_entities()
+    generator.gen_readme()
+    generator.gen_utils()
