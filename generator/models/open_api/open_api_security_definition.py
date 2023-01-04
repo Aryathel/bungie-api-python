@@ -6,7 +6,7 @@ from dataclasses_json import dataclass_json, config
 
 @dataclass_json
 @dataclass(kw_only=True)
-class OpenAPISecurityDefinition:
+class OpenAPISecurityScheme:
     type: str
     description: str
     name: Optional[str] = field(default=None)
@@ -14,4 +14,4 @@ class OpenAPISecurityDefinition:
     authorizationUrl: Optional[str] = field(default=None)
     tokenUrl: Optional[str] = field(default=None)
     flow: Optional[str] = field(default=None)
-    scopes: dict[str, str]
+    scopes: Optional[dict[str, str]] = field(default=None)

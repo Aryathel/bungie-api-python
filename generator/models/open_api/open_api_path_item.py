@@ -3,8 +3,9 @@ from typing import Optional
 
 from dataclasses_json import dataclass_json, config
 
-from generator.models.open_api_parameter import OpenAPIParameter
-from generator.models.open_api_reference import OpenAPIReference
+from .open_api_operation import OpenAPIOperation
+from .open_api_parameter import OpenAPIParameter
+from .open_api_reference import OpenAPIReference
 
 
 @dataclass_json

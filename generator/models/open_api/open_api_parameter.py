@@ -4,16 +4,22 @@ from typing import Optional, Any
 from dataclasses_json import dataclass_json, config
 
 from .open_api_reference import OpenAPIReference
-from .open_api_external_documentation import OpenAPIExternalDocumentation
+from .open_api_schema import OpenAPISchema
 
 
 @dataclass_json
 @dataclass(kw_only=True)
-class OpenAPISchema:
-    ref: Optional[str] = field(default=None, metadata=config(field_name='$ref'))
-    format: Optional[str] = field(default=None)
-    title: Optional[str] = field(default=None)
+class OpenAPIParameter:
+    name: str
+    in_: str = field(metadata=config(field_name='in'))
     description: Optional[str] = field(default=None)
+    required: Optional[bool] = field(default=None)
+    schema: Optional[OpenAPISchema] = field(default=None)
+    type: Optional[str] = field(default=None)
+    format: Optional[str] = field(default=None)
+    allowEmptyValue: Optional[bool] = field(default=None)
+    items: Optional[OpenAPIReference] = field(default=None)
+    collectionFormat: Optional[str] = field(default=None)
     default: Optional[Any] = field(default=None)
     maximum: Optional[float] = field(default=None)
     exclusiveMaximum: Optional[bool] = field(default=None)
@@ -28,12 +34,3 @@ class OpenAPISchema:
     enum: Optional[list[Any]] = field(default=None)
     multipleOf: Optional[float] = field(default=None)
 
-    items: Optional[OpenAPIItems] = field(default=None)
-    allOf: Optional[list[OpenAPIReference]] = field(default=None)
-    properties: dict[str, ]
-
-    discriminator: Optional[str] = field(default=None)
-    readOnly: Optional[bool] = field(default=None)
-    xml: Optional[Any] = field(default=None)
-    externalDocs: Optional[OpenAPIExternalDocumentation] = field(default=None)
-    example: Optional[Any] = field(default=None)

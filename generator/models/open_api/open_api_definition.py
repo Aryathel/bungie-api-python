@@ -10,6 +10,7 @@ from .open_api_property import OpenAPIProperty
 @dataclass_json
 @dataclass(kw_only=True)
 class OpenAPIDefinition:
+    description: Optional[str] = field(default=None)
     format: Optional[str] = field(default=None)
     enum: Optional[list[str]] = field(default=None)
     type: str

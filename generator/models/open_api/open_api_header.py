@@ -1,23 +1,16 @@
 from dataclasses import dataclass, field
 from typing import Optional, Any
 
-from dataclasses_json import dataclass_json, config
-
-from .open_api_schema import OpenAPISchema
+from dataclasses_json import dataclass_json
 
 
 @dataclass_json
 @dataclass(kw_only=True)
-class OpenAPIParameter:
-    name: str
-    in_: str = field(metadata=config(field_name='in'))
+class OpenAPIHeader:
     description: Optional[str] = field(default=None)
-    required: Optional[bool] = field(default=None)
-    schema: Optional[OpenAPISchema] = field(default=None)
-    type: Optional[str] = field(default=None)
+    type: str
     format: Optional[str] = field(default=None)
-    allowEmptyValue: Optional[bool] = field(default=None)
-    items: Optional[OpenAPIItems] = field(default=None)
+    items: Optional[Any] = field(default=None)
     collectionFormat: Optional[str] = field(default=None)
     default: Optional[Any] = field(default=None)
     maximum: Optional[float] = field(default=None)
@@ -32,4 +25,3 @@ class OpenAPIParameter:
     uniqueItems: Optional[bool] = field(default=None)
     enum: Optional[list[Any]] = field(default=None)
     multipleOf: Optional[float] = field(default=None)
-

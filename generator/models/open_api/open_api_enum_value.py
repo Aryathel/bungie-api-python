@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Optional
 
 from dataclasses_json import dataclass_json
 
@@ -8,3 +9,4 @@ from dataclasses_json import dataclass_json
 class OpenAPIEnumValue:
     numericValue: int
     identifier: str
+    description: Optional[str] = field(default=None)
