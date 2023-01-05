@@ -22,6 +22,7 @@ class OpenAPIProperty:
     items: Optional[OpenAPIItem] = field(default=None)
     x_enum_reference: Optional[OpenAPIReference] = field(default=None, metadata=config(field_name='x-enum-reference'))
     additionalProperties: Optional['OpenAPIProperty'] = field(default=None)
+    allOf: Optional[list[OpenAPIReference]] = field(default=None)
 
     @property
     def is_ref(self) -> bool:

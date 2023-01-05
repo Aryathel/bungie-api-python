@@ -2,6 +2,8 @@ import os
 
 import requests
 
+from .models.enum_class import EnumClass
+from .models.entity_tree import EntityTree
 from .utils.str_utils import StringUtils
 from .models.class_property import ClassProperty
 from .models.entity_import import EntityImport, EntityImportCollection
@@ -25,6 +27,7 @@ class APIGenerator:
     readme_file = 'README.md'
     datetime_utils_file = 'datetime_utils'
     enum_utils_file = 'enum_utils'
+    byte_utils_file = 'byte_utils'
 
     default_entity_imports = EntityImportCollection([
         EntityImport(
@@ -52,22 +55,13 @@ class APIGenerator:
 
     def __init__(self):
         self.spec = self.load_spec()
+        self.entity_tree = EntityTree()
 
     @staticmethod
     def load_spec() -> OpenAPISpec:
         with requests.get(open_api_spec) as r:
             r.raise_for_status()
             return OpenAPISpec.from_dict(r.json())
-
-    @staticmethod
-    def gen_import(pkg: str, imp: list[str] = None, relative: bool = False) -> str:
-        if relative:
-            pkg = f'.{pkg}'
-
-        if imp:
-            return f'from {pkg} import {", ".join(imp)}'
-        else:
-            return f'import {pkg}'
 
     @classmethod
     def entity_decorators(cls, decorators: list[str] = None, depth: int = 0) -> str:
@@ -176,6 +170,30 @@ class APIGenerator:
                             comment=prop.description,
                             list=True,
                         ))
+                    elif prop.items.type == PropertyType.string.value:
+                        properties.append(ClassProperty(
+                            name=k,
+                            type='str',
+                            comment=prop.description,
+                            optional=True,
+                            list=True
+                        ))
+                    elif prop.items.type == PropertyType.integer.value:
+                        properties.append(ClassProperty(
+                            name=k,
+                            type='int',
+                            comment=prop.description,
+                            optional=True,
+                            list=True,
+                        ))
+                    elif prop.items.type == PropertyType.boolean.value:
+                        properties.append(ClassProperty(
+                            name=k,
+                            type='bool',
+                            comment=prop.description,
+                            optional=True,
+                            list=True,
+                        ))
                     else:
                         print(f'UNHANDLED ARRAY PROPERTY: {path} - {k} - {prop}')
                 elif prop_type == PropertyType.string:
@@ -202,6 +220,19 @@ class APIGenerator:
                             type='str',
                             optional=True,
                             comment=prop.description,
+                        ))
+                    elif fmt == PropertyFormat.byte:
+                        imports.add_import(EntityImport(
+                            name=f'{"." * (path.count(".") + 1)}{cls.utils_path_name}.{cls.byte_utils_file}',
+                            type=ImportType.relative,
+                            imports=['BYTE_META']
+                        ))
+                        properties.append(ClassProperty(
+                            name=k,
+                            type='str | int',
+                            optional=True,
+                            comment=prop.description,
+                            byte=True,
                         ))
                     else:
                         print(f'UNHANDLED STRING FORMAT: {path} - {k} - {prop}')
@@ -256,10 +287,67 @@ class APIGenerator:
                     elif prop.additionalProperties and prop.additionalProperties.type == PropertyType.string.value:
                         properties.append(ClassProperty(
                             name=k,
-                            type='dict[str, str]',
+                            type='dict[int, str]',
                             optional=True,
                             comment=prop.description,
                         ))
+                    elif prop.additionalProperties and prop.additionalProperties.type == PropertyType.object.value:
+                        imports.add_import(EntityImport(name='typing', type=ImportType.stdlib, imports=['Any']))
+                        properties.append(ClassProperty(
+                            name=k,
+                            type='dict[int, Any]',
+                            optional=True,
+                            comment=prop.description,
+                        ))
+                    elif prop.allOf and len(prop.allOf) == 1:
+                        imp, cls_name = cls.gen_import_from_ref(path, prop.allOf[0].ref)
+                        imports.add_import(imp)
+                        properties.append(ClassProperty(
+                            name=k,
+                            type=cls_name,
+                            optional=True,
+                            comment=prop.description,
+                        ))
+                    elif prop.additionalProperties and prop.additionalProperties.is_enum_reference:
+                        imp, cls_name = cls.gen_import_from_ref(path, prop.additionalProperties.x_enum_reference.ref)
+                        imports.add_import(imp)
+                        properties.append(ClassProperty(
+                            name=k,
+                            type=f'dict[int, {cls_name}]',
+                            optional=True,
+                            comment=prop.description,
+                        ))
+                    elif prop.additionalProperties and prop.additionalProperties.type == PropertyType.integer.value:
+                        properties.append(ClassProperty(
+                            name=k,
+                            type='dict[int, int]',
+                            optional=True,
+                            comment=prop.description,
+                        ))
+                    elif prop.additionalProperties and prop.additionalProperties.type == PropertyType.boolean.value:
+                        properties.append(ClassProperty(
+                            name=k,
+                            type='dict[int, bool]',
+                            optional=True,
+                            comment=prop.description,
+                        ))
+                    elif prop.additionalProperties and prop.additionalProperties.type == PropertyType.number.value:
+                        properties.append(ClassProperty(
+                            name=k,
+                            type='dict[int, float]',
+                            optional=True,
+                            comment=prop.description,
+                        ))
+                    elif prop.additionalProperties and prop.additionalProperties.type == PropertyType.array.value:
+                        if prop.additionalProperties.items and prop.additionalProperties.items.is_ref:
+                            imp, cls_name = cls.gen_import_from_ref(path, prop.additionalProperties.items.ref)
+                            imports.add_import(imp)
+                            properties.append(ClassProperty(
+                                name=k,
+                                type=f'dict[int, list[{cls_name}]]',
+                                optional=True,
+                                comment=prop.description
+                            ))
                     else:
                         print(f'UNHANDLED OBJECT PROPERTY TYPE: {path} - {k} - {prop}')
                 elif prop.is_ref:
@@ -273,6 +361,10 @@ class APIGenerator:
                     ))
                 else:
                     print(f'UNHANDLED PROPERTY TYPE: {path} - {k} - {prop_type}')
+        elif entity.type == PropertyType.object.value and entity.additionalProperties.is_ref:
+            imp, cls_name = cls.gen_import_from_ref(path, entity.additionalProperties.ref)
+            imports = EntityImportCollection([imp])
+
         else:
             print(f'ENTITY HAS NO PROPERTIES: {path}')
 
@@ -315,35 +407,102 @@ class APIGenerator:
             class_file.write('\n'.join(body))
 
     @classmethod
+    def generate_placeholder_type(
+            cls,
+            file: str,
+            class_name: str,
+            qualified_class_name: str,
+            entity: OpenAPISchema
+    ) -> None:
+        # Get the necessary import.
+        if entity.additionalProperties and entity.additionalProperties.is_ref:
+            imp, cls_name = cls.gen_import_from_ref(qualified_class_name, entity.additionalProperties.ref)
+            imports = EntityImportCollection([imp])
+        else:
+            imports = EntityImportCollection([])
+
+        body = [imports.formatted_imports]
+
+        body.append(StringUtils.gen_line_break_comment('TYPE DEFINITION'))
+
+        # Handle the type description as a comment
+        if entity.description:
+            body.append(StringUtils.gen_comment(entity.description, depth=1))
+
+        # Handle the type body
+        if entity.additionalProperties and entity.additionalProperties.ref:
+            body.append(f'{class_name} = dict[str, {cls_name}]')
+        else:
+            body.append(f'{class_name} = dict')
+
+        body.append('')
+
+        with open(file, 'w+') as type_file:
+            type_file.write('\n'.join(body))
+
+    @classmethod
+    def generate_enum_array(cls, file: str, class_name: str, qualified_class_name: str, entity: OpenAPISchema) -> None:
+        # Handle enum import
+        imp, cls_name = cls.gen_import_from_ref(qualified_class_name, entity.items.x_enum_reference.ref)
+        imports = EntityImportCollection([imp])
+
+        body = [imports.formatted_imports]
+
+        # Handle the type description as a comment
+        if entity.description:
+            body.append(StringUtils.gen_comment(entity.description, depth=1))
+
+        # Define enum array type.
+        body.append(f'{class_name.replace("[]", "Array")} = list[{cls_name}]')
+        body.append('')
+
+        with open(file.replace('[]', '_array'), 'w+') as type_file:
+            type_file.write('\n'.join(body))
+
+    @classmethod
     def generate_enum(cls, file: str, class_name: str, entity: OpenAPISchema) -> None:
-        pass
+        enum = EnumClass(class_name, entity.type, entity.format)
+        for value in entity.x_enum_values:
+            enum.add_value(value)
+
+        with open(file, 'w+') as enum_file:
+            enum_file.write(enum.formatted_enum)
 
     def gen_entities(self) -> None:
         self.registry = {}
-
         # Ensure that the necessary folders exist.
-        count = 2000
         for k, entity in self.spec.definitions.items():
-            if count == 0:
-                break
+            self.entity_tree.add_item(k)
             file, class_name = self.process_namespace(k)
             self.registry[k] = {
                 'file': file,
                 'class': class_name,
             }
-            count -= 1
+
+        self.entity_tree.populate_init_files(root=os.path.join(self.generated_path, self.entities_path_name))
 
         # Generate the entity classes.
-        count = 2000
         for k, entity in self.spec.definitions.items():
-            if count == 0:
-                break
-            if entity.is_object:
+            if entity.is_object and entity.properties:
                 self.generate_class(
                     self.registry[k]['file'],
                     self.registry[k]['class'],
                     k,
                     entity
+                )
+            elif entity.is_object and not entity.properties:
+                self.generate_placeholder_type(
+                    self.registry[k]['file'],
+                    self.registry[k]['class'],
+                    k,
+                    entity,
+                )
+            elif entity.is_array and entity.items.is_enum_reference:
+                self.generate_enum_array(
+                    self.registry[k]['file'],
+                    self.registry[k]['class'],
+                    k,
+                    entity,
                 )
             elif entity.is_enum:
                 self.generate_enum(
@@ -352,13 +511,14 @@ class APIGenerator:
                     entity
                 )
             else:
-                print(f'UNHANDLED ENTITY: {k}')
-            count -= 1
+                print(f'UNHANDLED ENTITY: {k} - {entity}')
 
     def gen_readme(self) -> None:
         content = f'# {self.spec.info.title} - {self.spec.info.version}'
         content += '\n\n'
         content += '\n'.join(StringUtils.split_text_for_wrapping(self.spec.info.description))
+        content += '\n\n'
+        content += 'This content is automatically generated via the OpenAPI Swagger 2.0 specification.'
         content += '\n\n'
         content += '### Resources'
         content += '\n\n'
@@ -441,6 +601,32 @@ class APIGenerator:
 
             # Enum metadata
             content += 'ENUM_META = config(encoder=enum_encoder)\n'
+
+            f.write(content)
+
+        with open(
+                os.path.join(self.generated_path, self.utils_path_name, self.byte_utils_file + self.file_extension),
+                'w+'
+        ) as f:
+            # Byte util imports
+            imports = EntityImportCollection([EntityImport(
+                name='dataclasses_json',
+                type=ImportType.external,
+                imports=['config']
+            )])
+            content = imports.formatted_imports
+            content += '\n'
+
+            # Byte decoder
+            content += 'def byte_decoder(value: str | int) -> str | int:\n'
+            content += StringUtils.indent_str('try:\n', 1)
+            content += StringUtils.indent_str('return int(value)\n', 2)
+            content += StringUtils.indent_str('except ValueError:\n', 1)
+            content += StringUtils.indent_str('return str(value)\n', 2)
+            content += '\n\n'
+
+            # Byte metadata
+            content += 'BYTE_META = config(decoder=byte_decoder)\n'
 
             f.write(content)
 

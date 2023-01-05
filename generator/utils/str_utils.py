@@ -5,6 +5,16 @@ class StringUtils:
     max_line_length = 120
     indent = '    '
 
+    @staticmethod
+    def gen_import(pkg: str, imp: list[str] = None, relative: bool = False) -> str:
+        if relative:
+            pkg = f'.{pkg}'
+
+        if imp:
+            return f'from {pkg} import {", ".join(imp)}'
+        else:
+            return f'import {pkg}'
+
     @classmethod
     def indent_str(cls, content: str, depth: int):
         return f'{cls.indent * depth}{content}'

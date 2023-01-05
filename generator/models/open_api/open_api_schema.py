@@ -4,6 +4,7 @@ from typing import Optional, Any
 from dataclasses_json import dataclass_json, config
 
 from .open_api_enum_value import OpenAPIEnumValue
+from .open_api_item import OpenAPIItem
 from .open_api_property import OpenAPIProperty
 from .open_api_reference import OpenAPIReference
 from .open_api_external_documentation import OpenAPIExternalDocumentation
@@ -32,7 +33,7 @@ class OpenAPISchema:
     x_enum_values: Optional[list[OpenAPIEnumValue]] = field(default=None, metadata=config(field_name='x-enum-values'))
     multipleOf: Optional[float] = field(default=None)
 
-    items: Optional[OpenAPIReference] = field(default=None)
+    items: Optional[OpenAPIItem] = field(default=None)
     allOf: Optional[list[OpenAPIReference]] = field(default=None)
     properties: Optional[dict[str, OpenAPIProperty]] = field(default=None)
 
@@ -41,10 +42,15 @@ class OpenAPISchema:
     xml: Optional[Any] = field(default=None)
     externalDocs: Optional[OpenAPIExternalDocumentation] = field(default=None)
     example: Optional[Any] = field(default=None)
+    additionalProperties: Optional[OpenAPIItem] = field(default=None)
 
     @property
     def is_object(self) -> bool:
         return self.type == 'object'
+
+    @property
+    def is_array(self) -> bool:
+        return self.type == 'array'
 
     @property
     def is_enum(self) -> bool:

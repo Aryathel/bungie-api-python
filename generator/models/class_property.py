@@ -11,6 +11,7 @@ class ClassProperty:
     optional: bool = field(default=False)
     list: bool = field(default=False)
     is_enum: bool = field(default=False)
+    byte: bool = field(default=False)
     comment: Optional[str] = field(default=None)
 
     @property
@@ -42,6 +43,8 @@ class ClassProperty:
             args.append('metadata=DATETIME_META')
         if self.is_enum:
             args.append('metadata=ENUM_META')
+        if self.byte:
+            args.append('metadata=BYTE_META')
 
         if args:
             val += f' = field('
