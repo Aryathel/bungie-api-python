@@ -1,4 +1,4 @@
-name: Test Bungie API Endpoints
+name: Test API Build From Spec
 
 on:
   push:
@@ -42,4 +42,4 @@ jobs:
           BUNGIE_CLIENT_TYPE: ${{ secrets.BUNGIE_CLIENT_TYPE }}
           BUNGIE_OAUTH_CODE: ${{ secrets.BUNGIE_OAUTH_CODE }}
         run: |
-          pipenv run python -m unittest discover -s ./tests/automated -p 'test_*.py'
+          pipenv run python -m generate.py

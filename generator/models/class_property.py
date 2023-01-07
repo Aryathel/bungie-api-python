@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Optional
 
+from .enums import PropertyType
 from ..utils.str_utils import StringUtils
 
 
@@ -10,9 +11,20 @@ class ClassProperty:
     type: str
     optional: bool = field(default=False)
     list: bool = field(default=False)
-    is_enum: bool = field(default=False)
+    dict: bool = field(default=False)
+    key_type: str = field(default=None)
+    enum: bool = field(default=False)
     byte: bool = field(default=False)
+    forward_ref: bool = field(default=False)
     comment: Optional[str] = field(default=None)
+
+    def __post_init__(self) -> None:
+        if self.dict and not self.key_type:
+            raise KeyError("A property cannot be a dict type without a provided key_type.")
+
+    @property
+    def ref_type(self) -> str:
+        return f'\'{self.type}\'' if self.forward_ref else self.type
 
     @property
     def field_type(self) -> str:
@@ -20,16 +32,40 @@ class ClassProperty:
 
         if self.optional:
             t += 'Optional['
+        if self.dict:
+            t += f'dict[{self.key_type}, '
+        if self.list:
+            t += f'list['
+
+        t += self.ref_type
 
         if self.list:
-            t += f'list[{self.type}]'
-        else:
-            t += self.type
-
+            t += ']'
+        if self.dict:
+            t += ']'
         if self.optional:
             t += ']'
 
         return t
+
+    @property
+    def forward_ref_mm_field(self) -> str:
+        if self.forward_ref:
+            arg = 'mm_field='
+
+            if self.dict:
+                arg += f'{PropertyType.object.mm_type}(keys={self.key_type}, values='
+            if self.list:
+                arg += PropertyType.array.mm_type + '('
+
+            arg += f'fields.Nested(lambda: {self.type}.schema())'
+
+            if self.list:
+                arg += ')'
+            if self.dict:
+                arg += ')'
+
+            return arg
 
     @property
     def field_value(self) -> str:
@@ -41,10 +77,12 @@ class ClassProperty:
             args.append('default=None')
         if self.type == 'datetime':
             args.append('metadata=DATETIME_META')
-        if self.is_enum:
+        if self.enum:
             args.append('metadata=ENUM_META')
         if self.byte:
-            args.append('metadata=BYTE_META')
+            args.append('metadata=config(mm_field=UnionField(fields=[fields.Integer, fields.String]))')
+        if self.forward_ref:
+            args.append(f'metadata=config({self.forward_ref_mm_field})')
 
         if args:
             val += f' = field('

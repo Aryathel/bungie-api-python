@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Iterator
+from typing import Iterator, Optional
 
 from .enums import ImportType
 from ..utils.str_utils import StringUtils
@@ -11,6 +11,7 @@ class EntityImport:
     type: ImportType
     imports: list[str] = field(default=None)
     self_ref: bool = field(default=False)
+    alias: Optional[str] = field(default=None)
 
     @property
     def specific(self) -> bool:
@@ -34,9 +35,9 @@ class EntityImport:
             imp += ', '.join(sorted(self.imports))
         else:
             if self.relative:
-                imp = f'import .{self.name}'
+                imp = f'import .{self.name}{" as " + self.alias if self.alias else ""}'
             else:
-                imp = f'import {self.name}'
+                imp = f'import {self.name}{" as " + self.alias if self.alias else ""}'
 
         return imp
 

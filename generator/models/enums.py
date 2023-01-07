@@ -19,6 +19,36 @@ class PropertyType(Enum):
     boolean = "boolean"
     object = "object"
 
+    @property
+    def python_type(self) -> str:
+        if self == PropertyType.array:
+            return 'list'
+        elif self == PropertyType.string:
+            return 'str'
+        elif self == PropertyType.integer:
+            return 'int'
+        elif self == PropertyType.boolean:
+            return 'bool'
+        elif self == PropertyType.object:
+            return 'dict'
+        else:
+            raise ValueError('PropertyType is None.')
+
+    @property
+    def mm_type(self) -> str:
+        if self == PropertyType.array:
+            return 'fields.List'
+        elif self == PropertyType.string:
+            return 'fields.String'
+        elif self == PropertyType.integer:
+            return 'fields.Integer'
+        elif self == PropertyType.boolean:
+            return 'fields.Boolean'
+        elif self == PropertyType.object:
+            return 'fields.Dict'
+        else:
+            raise ValueError('PropertyType is None.')
+
 
 class PropertyFormat(Enum):
     none = None

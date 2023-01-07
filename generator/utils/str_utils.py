@@ -15,6 +15,16 @@ class StringUtils:
         else:
             return f'import {pkg}'
 
+    @staticmethod
+    def gen_class_declaration(class_name: str, inheritance: list[str] | str = None) -> str:
+        if not inheritance:
+            return f'class {class_name}:'
+        else:
+            if isinstance(inheritance, str):
+                return f'class {class_name}({inheritance}):'
+            else:
+                return f'class {class_name}({", ".join(inheritance)}):'
+
     @classmethod
     def indent_str(cls, content: str, depth: int):
         return f'{cls.indent * depth}{content}'
@@ -63,3 +73,7 @@ class StringUtils:
     def gen_line_break_comment(cls, inp: str, depth: int = 0) -> str:
         prefix = f'{cls.indent * depth}# --- '
         return f'{prefix}{inp + " ":-<{cls.max_line_length - len(prefix)}}'
+
+    @classmethod
+    def get_class_name_from_ref_str(cls, ref: str) -> str:
+        return ref.split('/')[-1].split('.')[-1].replace('[]', 'Array')
