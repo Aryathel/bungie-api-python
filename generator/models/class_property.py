@@ -15,6 +15,7 @@ class ClassProperty:
     key_type: str = field(default=None)
     enum: bool = field(default=False)
     byte: bool = field(default=False)
+    enum_key: bool = field(default=False)
     forward_ref: bool = field(default=False)
     comment: Optional[str] = field(default=None)
 
@@ -33,7 +34,7 @@ class ClassProperty:
         if self.optional:
             t += 'Optional['
         if self.dict:
-            t += f'dict[{self.key_type}, '
+            t += f'dict[{PropertyType(self.key_type).python_type if not self.enum_key else self.key_type}, '
         if self.list:
             t += f'list['
 
@@ -54,7 +55,7 @@ class ClassProperty:
             arg = 'mm_field='
 
             if self.dict:
-                arg += f'{PropertyType.object.mm_type}(keys={self.key_type}, values='
+                arg += f'{PropertyType.object.mm_type}(keys={PropertyType(self.key_type).mm_type if not self.enum_key else "fields.Enum(" + self.key_type+ ")"}, values='
             if self.list:
                 arg += PropertyType.array.mm_type + '('
 
@@ -76,9 +77,7 @@ class ClassProperty:
         if self.optional:
             args.append('default=None')
         if self.type == 'datetime':
-            args.append('metadata=DATETIME_META')
-        if self.enum:
-            args.append('metadata=ENUM_META')
+            args.append('metadata=config(mm_field=fields.DateTime(format=\'iso\'))')
         if self.byte:
             args.append('metadata=config(mm_field=UnionField(fields=[fields.Integer, fields.String]))')
         if self.forward_ref:

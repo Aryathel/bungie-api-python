@@ -30,6 +30,7 @@ class APIGenerator:
     union_field_file = 'union_field'
     entity_model_file = 'models'
     enum_model_file = 'enums'
+    responses_model_file = 'responses'
 
     default_entity_imports = EntityImportCollection([
         EntityImport(
@@ -62,6 +63,7 @@ class APIGenerator:
         self.spec = self.load_spec()
         self.enums = EnumCollection()
         self.entities = EntityCollection()
+        self.responses = EntityCollection()
 
     @staticmethod
     def load_spec() -> OpenApi:
@@ -81,24 +83,10 @@ class APIGenerator:
         if not os.path.exists(entity_base):
             os.mkdir(entity_base)
 
-    def generate_class(self, class_name: str, qualified_class_name: str, entity: Schema) -> None:
-        entity_model = Entity(class_name, qualified_class_name, entity)
-        self.major_imports.add_collection(entity_model.imports)
-        self.entities.append(entity_model)
-
-    def write_objects(self) -> None:
-        self.enums.write_enum_file(os.path.join(
-            self.generated_path,
-            self.entities_path_name,
-            self.enum_model_file + self.file_extension
-        ))
-        self.entities.write_entity_file(os.path.join(
-            self.generated_path,
-            self.entities_path_name,
-            self.entity_model_file + self.file_extension
-        ))
-
     def write_init(self) -> None:
+        with open(os.path.join(self.generated_path, '__init__.py'), 'w+') as proj_init:
+            pass
+
         with open(
                 os.path.join(
                     self.generated_path,
@@ -115,7 +103,14 @@ class APIGenerator:
             content += '\n'
             content += '\n'.join(self.entities.init_imports)
             content += '\n\n'
-            content += '__all__ = ' + json.dumps(self.enums.enum_names + self.entities.entity_names, indent=2)
+            content += StringUtils.gen_line_break_comment('RESPONSE IMPORTS')
+            content += '\n'
+            content += '\n'.join(self.responses.init_imports)
+            content += '\n\n'
+            content += '__all__ = ' + json.dumps(
+                self.enums.enum_names + self.entities.entity_names + self.responses.entity_names,
+                indent=2
+            )
             content += '\n'
             entity_init.write(content)
 
@@ -127,7 +122,8 @@ class APIGenerator:
         with alive_bar(
                 len(self.spec.components.schemas),
                 force_tty=True,
-                title='LOADING SCHEMA COMPONENTS'
+                title='COMPONENTS: SCHEMAS',
+                title_length=21
         ) as bar:
             for k, schema in self.spec.components.schemas.items():
                 # Handle enums
@@ -139,11 +135,45 @@ class APIGenerator:
                     print(f'UNHANDLED SCHEMA TYPE: {k} - {schema.type} - {schema}')
                 bar()
 
-        self.write_objects()
+        self.enums.write_enum_file(os.path.join(
+            self.generated_path,
+            self.entities_path_name,
+            self.enum_model_file + self.file_extension
+        ))
+        self.entities.write_entity_file(os.path.join(
+            self.generated_path,
+            self.entities_path_name,
+            self.entity_model_file + self.file_extension
+        ))
+
+    def gen_responses(self) -> None:
+        # Ensure that the necessary folders exist.
+        self.process_namespace()
+
+        # Process component schemas
+        with alive_bar(
+                len(self.spec.components.responses),
+                force_tty=True,
+                title='COMPONENTS: RESPONSES',
+                title_length=21
+        ) as bar:
+            for k, response in self.spec.components.responses.items():
+                if PropertyType(response.content['application/json'].schema.type) in (PropertyType.object, PropertyType.array):
+                    self.responses.add_response(k, response)
+                else:
+                    print(f'UNHANDLED RESPONSE TYPE: {k} - {response.content["application/json"].schema.type} - '
+                          f'{response.content["application/json"].schema}')
+                bar()
+
+        self.responses.write_entity_file(os.path.join(
+            self.generated_path,
+            self.entities_path_name,
+            self.responses_model_file + self.file_extension
+        ))
 
     def gen_readme(self) -> None:
         readme_count = 1
-        with alive_bar(readme_count, title='GENERATING README FILES', force_tty=True) as bar:
+        with alive_bar(readme_count, title='README FILES', force_tty=True, title_length=21) as bar:
             content = f'# {self.spec.info.title} - {self.spec.info.version}'
             content += '\n\n'
             content += '\n'.join(StringUtils.split_text_for_wrapping(self.spec.info.description))
@@ -172,8 +202,8 @@ class APIGenerator:
             bar()
 
     def gen_utils(self) -> None:
-        util_count = 3
-        with alive_bar(util_count, title='GENERATING UTIL FILES', force_tty=True) as bar:
+        util_count = 1
+        with alive_bar(util_count, title='UTIL FILES', force_tty=True, title_length=21) as bar:
 
             # Ensure path and default files exist.
             if not os.path.exists(self.generated_path):
@@ -183,70 +213,6 @@ class APIGenerator:
             if not os.path.exists(os.path.join(self.generated_path, self.utils_path_name, '__init__.py')):
                 with open(os.path.join(self.generated_path, self.utils_path_name, '__init__.py'), 'w+') as f:
                     f.write('')
-
-            # Write datetime utils
-            with open(
-                    os.path.join(self.generated_path, self.utils_path_name, self.datetime_utils_file + self.file_extension),
-                    'w+'
-            ) as f:
-                # String Util Imports
-                imports = EntityImportCollection([
-                    EntityImport(name='datetime', type=ImportType.stdlib, imports=['datetime']),
-                    EntityImport(name='dataclasses_json', type=ImportType.external, imports=['config']),
-                    EntityImport(name='marshmallow', type=ImportType.external, imports=['fields'])
-                ])
-
-                content = imports.formatted_imports
-
-                # Datetime decoder from string
-                content += '\ndef datetime_field_decoder(st_str: str) -> datetime:\n'
-                content += StringUtils.indent_str('if st_str:\n', 1)
-                content += StringUtils.indent_str(
-                    "return datetime.fromisoformat(st_str.upper().strip('Z').split('.')[0])\n",
-                    2
-                )
-                content += '\n\n'
-
-                # Datetime encoder to string
-                content += 'def datetime_field_encoder(dt: datetime) -> str:\n'
-                content += StringUtils.indent_str('if dt:\n', 1)
-                content += StringUtils.indent_str("return dt.isoformat() + '.00Z'\n", 2)
-                content += '\n\n'
-
-                # Datetime metadata
-                content += 'DATETIME_META = config(\n'
-                content += StringUtils.indent_str('encoder=datetime_field_encoder,\n', 1)
-                content += StringUtils.indent_str('decoder=datetime_field_decoder,\n', 1)
-                content += StringUtils.indent_str('mm_field=fields.DateTime(format=\'iso\')\n', 1)
-                content += ')\n\n'
-
-                f.write(content)
-            bar()
-
-            with open(
-                    os.path.join(self.generated_path, self.utils_path_name, self.enum_utils_file + self.file_extension),
-                    'w+'
-            ) as f:
-                # Enum util imports
-                imports = EntityImportCollection([
-                    EntityImport(name='enum', type=ImportType.stdlib, imports=['Enum']),
-                    EntityImport(name='typing', type=ImportType.stdlib, imports=['Any']),
-                    EntityImport(name='dataclasses_json', type=ImportType.external, imports=['config'])
-                ])
-
-                content = imports.formatted_imports
-                content += '\n'
-
-                # Enum encoder
-                content += 'def enum_encoder(enm: Enum) -> Any:\n'
-                content += StringUtils.indent_str('return enm.value\n', 1)
-                content += '\n\n'
-
-                # Enum metadata
-                content += 'ENUM_META = config(encoder=enum_encoder)\n'
-
-                f.write(content)
-            bar()
 
             with open(
                     os.path.join(self.generated_path, self.utils_path_name, self.union_field_file + self.file_extension),
@@ -346,6 +312,7 @@ class APIGenerator:
         self.gen_readme()
         self.gen_utils()
         self.gen_entities()
+        self.gen_responses()
         self.write_init()
 
 

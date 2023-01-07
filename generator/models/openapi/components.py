@@ -14,7 +14,6 @@ from .request_body import RequestBody
 from .response import Response
 from .schema import Schema
 from .security_scheme import SecurityScheme
-from .utils import dict_union_dataclass_decoder
 
 
 @dataclass_json
