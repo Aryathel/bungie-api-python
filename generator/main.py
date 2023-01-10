@@ -239,7 +239,7 @@ class APIGenerator:
                     coll_name = 'Core'
                 if coll_name not in self.endpoints:
                     self.endpoints[coll_name] = EndpointCollection(coll_name, bungie_root=self.spec.servers[0])
-                self.endpoints[coll_name].add_endpoint(path, endpoint)
+                self.endpoints[coll_name].add_endpoint(path, endpoint, self.entities)
                 bar()
 
             for name, collection in self.endpoints.items():

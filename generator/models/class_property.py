@@ -33,6 +33,17 @@ class ClassProperty:
 
         if self.optional:
             t += 'Optional['
+
+        t += self.field_type_required
+
+        if self.optional:
+            t += ']'
+
+        return t
+
+    @property
+    def field_type_required(self) -> str:
+        t = ''
         if self.dict:
             t += f'dict[{PropertyType(self.key_type).python_type if not self.enum_key else self.key_type}, '
         if self.list:
@@ -43,8 +54,6 @@ class ClassProperty:
         if self.list:
             t += ']'
         if self.dict:
-            t += ']'
-        if self.optional:
             t += ']'
 
         return t

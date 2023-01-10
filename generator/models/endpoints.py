@@ -1,18 +1,30 @@
 import os
-from typing import Optional, Any
+from typing import Optional
 
+from .entity import Entity, EntityCollection
 from .entity_import import EntityImportCollection, EntityImport
-from .enums import ImportType, PropertyType
+from .enums import ImportType, PropertyType, PropertyFormat
 from .openapi.parameter import Parameter
 from .openapi.path_item import PathItem
 from .openapi.reference import Reference
+from .openapi.request_body import RequestBody
 from .openapi.schema import Schema
 from .openapi.server import Server
 from ..utils.str_utils import StringUtils
 
 
 class EndpointParam:
-    def __init__(self, name: str, required: bool = True, type: str = None, default: str = None, is_enum: bool = False) -> None:
+    def __init__(
+            self,
+            name: str,
+            required: bool = True,
+            type: str = None,
+            default: str = None,
+            is_enum: bool = False,
+            is_datetime: bool = False,
+            is_array: bool = False,
+            from_body: bool = False,
+    ) -> None:
         if required is None:
             required = False
 
@@ -21,10 +33,31 @@ class EndpointParam:
         self.raw_type = type
         self.default = default
         self.is_enum = is_enum
-        if self.is_enum:
-            self._type = f'{type} | int'
+        self.is_datetime = is_datetime
+        self.is_array = is_array
+        self.from_body = from_body
+
+        if type:
+            self._type = ''
+            if self.is_array:
+                self._type += 'list['
+            if self.is_enum:
+                self._type += f'{type} | int'
+            elif self.is_datetime:
+                self._type += f'{type} | str'
+            else:
+                self._type += type
+            if self.is_array:
+                self._type += ']'
         else:
-            self._type = type
+            if self.is_array:
+                self._type = 'list'
+            elif self.is_enum:
+                self._type = 'int'
+            elif self.is_datetime:
+                self._type = 'str'
+            else:
+                self._type = None
 
     @property
     def snake_name(self) -> str:
@@ -33,14 +66,14 @@ class EndpointParam:
     @property
     def type(self) -> str:
         if self._type:
-            if self.required:
-                return self._type
-            else:
+            if not self.required and not self.from_body:
                 return f'Optional[{self._type}]'
+            else:
+                return self._type
 
     @property
     def default_str(self) -> str:
-        if not self.required:
+        if not self.required and not self.from_body:
             return f' = {self.default}'
         else:
             if self.default:
@@ -52,10 +85,19 @@ class EndpointParam:
 
     @property
     def format_format(self) -> str:
-        if not self.is_enum:
-            return f'{self.name}={self.snake_name}'
+        return f'{self.name}={self.value}'
+
+    @property
+    def value(self) -> str:
+        if self.is_enum:
+            if self.is_array:
+                return f'\',\'.join(str(e.value) for e in {self.snake_name})'
+            else:
+                return f'{self.snake_name}.value'
+        elif self.is_datetime:
+            return f'{self.snake_name}.isoformat()'
         else:
-            return f'{self.name}={self.snake_name}.value'
+            return self.snake_name
 
 
 class Endpoint:
@@ -63,6 +105,8 @@ class Endpoint:
     # Mapping of parameter type (path, query, etc.) to a list of endpoint params
     parameters: dict[str, list[EndpointParam]]
     response_is_model: bool
+    request_body_entity: Entity | None
+    array_body_type: str | None
 
     entities_path_name = 'entities'
     bungie_root_var = '{bungie_root}'
@@ -71,16 +115,20 @@ class Endpoint:
             self,
             path: str,
             endpoint: PathItem,
+            entities: EntityCollection,
             is_async: bool = False,
     ) -> None:
         self.path = path
         self.endpoint = endpoint
+        self.entities = entities
         self.is_async = is_async
 
         self.imports = EntityImportCollection()
         self.response_type = None
         self.parameters = {'core': [EndpointParam(name='self')]}
         self.response_is_model = False
+        self.request_body_entity = None
+        self.array_body_type = None
 
         self.process_endpoint()
 
@@ -117,8 +165,29 @@ class Endpoint:
             return []
 
     @property
+    def request_body(self) -> RequestBody:
+        if self.get:
+            return self.endpoint.get.requestBody
+        elif self.post:
+            return self.endpoint.post.requestBody
+        else:
+            return None
+
+    @property
     def enum_params(self) -> list[EndpointParam]:
-        return [p for p in self.all_params if p.is_enum]
+        return [p for p in self.all_params if p.is_enum and not p.is_array and not p.from_body]
+
+    @property
+    def datetime_params(self) -> list[EndpointParam]:
+        return [p for p in self.all_params if p.is_datetime and not p.from_body]
+
+    @property
+    def array_enum_params(self) -> list[EndpointParam]:
+        return [p for p in self.all_params if p.is_enum and p.is_array and not p.from_body]
+
+    @property
+    def body_params(self) -> list[EndpointParam]:
+        return [p for p in self.all_params if p.from_body]
 
     @property
     def method(self) -> str:
@@ -166,32 +235,85 @@ class Endpoint:
         content = ''
         # Enum validation
         if self.enum_params:
+            content += StringUtils.gen_comment('Enum parameter validation.', 2)
+            content += '\n'
             for p in self.enum_params:
                 content += StringUtils.indent_str(f'if isinstance({p.snake_name}, int):\n', 2)
                 content += StringUtils.indent_str(f'{p.snake_name} = {p.raw_type}({p.snake_name})\n', 3)
             content += '\n'
+        if self.datetime_params:
+            content += StringUtils.gen_comment('Datetime parameter validation.', 2)
+            content += '\n'
+            for p in self.datetime_params:
+                content += StringUtils.indent_str(f'if isinstance({p.snake_name}, str):\n', 2)
+                content += StringUtils.indent_str(f'{p.snake_name} = datetime.fromisoformat({p.snake_name})\n', 3)
+            content += '\n'
+        if self.array_enum_params:
+            content += StringUtils.gen_comment('Enum list validation.', 2)
+            content += '\n'
+            for p in self.array_enum_params:
+                content += StringUtils.indent_str('tmp = []\n', 2)
+                content += StringUtils.indent_str(f'for e in {p.snake_name}:\n', 2)
+                content += StringUtils.indent_str(f'if isinstance(e, int):\n', 3)
+                content += StringUtils.indent_str(f'tmp.append({p.raw_type}(e))\n', 4)
+                content += StringUtils.indent_str(f'else:\n', 3)
+                content += StringUtils.indent_str(f'tmp.append(e)\n', 4)
+                content += StringUtils.indent_str(f'{p.snake_name} = tmp\n', 2)
+            content += '\n'
 
+        if self.parameters.get('query'):
+            content += StringUtils.gen_comment('Query parameters', 2)
+            content += '\n'
+            content += StringUtils.indent_str('_params = {}\n', 2)
+            for p in self.parameters.get('query'):
+                content += StringUtils.indent_str(f'if {p.snake_name}:\n', 2)
+                content += StringUtils.indent_str(f'_params[\'{p.name}\'] = {p.value}\n', 3)
+            content += '\n'
+
+        if self.body_params:
+            if self.request_body_entity:
+                content += StringUtils.gen_comment('Request body parameters', 2)
+                content += '\n'
+                content += StringUtils.indent_str(f'_entity = {self.request_body_entity if isinstance(self.request_body_entity, str) else self.request_body_entity.name_safe}(\n', 2)
+                for p in self.body_params:
+                    content += StringUtils.indent_str(f'{p.name}={p.snake_name},\n', 3)
+                content += StringUtils.indent_str(f')\n', 2)
+
+        content += StringUtils.gen_comment('Make the request', 2)
+        content += '\n'
         if not self.is_async:
             # Sync body
-            content += StringUtils.indent_str(f'raw = self._parent._{self.method}(\n', 2)
-            content += StringUtils.indent_str(f'\'{self.bungie_root_var}{self.path}\'.format(\n', 3)
-            content += StringUtils.indent_str('bungie_root=self._bungie_root,\n', 4)
-            content += '\n'.join(StringUtils.indent_str(p.format_format, 4) + ',' for p in self.parameters.get('path', []))
-            content += '\n' if self.parameters.get('path') else ''
-            content += StringUtils.indent_str('),\n', 3)
-            content += StringUtils.indent_str(')\n', 2)
-            content += StringUtils.indent_str(f'return {self.response_type}.schema().loads(raw)', 2)
+            content += StringUtils.indent_str(f'{"raw = " if self.response_type else ""}self._parent._{self.method}(\n', 2)
         else:
             # Async body
-            content += StringUtils.indent_str(f'raw = await self._parent._{self.method}(\n', 2)
-            content += StringUtils.indent_str(f'\'{self.bungie_root_var}{self.path}\'.format(\n', 3)
-            content += StringUtils.indent_str('bungie_root=self._bungie_root,\n', 4)
-            content += '\n'.join(
-                StringUtils.indent_str(p.format_format, 4) + ',' for p in self.parameters.get('path', []))
-            content += '\n' if self.parameters.get('path') else ''
-            content += StringUtils.indent_str('),\n', 3)
-            content += StringUtils.indent_str(')\n', 2)
+            content += StringUtils.indent_str(f'{"raw = " if self.response_type else ""}await self._parent._{self.method}(\n', 2)
+
+        # Arguments are the same
+        content += StringUtils.indent_str(f'\'{self.bungie_root_var}{self.path}\'.format(\n', 3)
+        content += StringUtils.indent_str('bungie_root=self._bungie_root,\n', 4)
+        content += '\n'.join(
+            StringUtils.indent_str(p.format_format, 4) + ',' for p in self.parameters.get('path', []))
+        content += '\n' if self.parameters.get('path') else ''
+        content += StringUtils.indent_str('),\n', 3)
+
+        if self.parameters.get('query'):
+            content += StringUtils.indent_str('params=_params if _params else None,\n', 3)
+        if self.body_params:
+            content += StringUtils.indent_str('headers={\'Content-Type\': \'application/json\'},\n', 3)
+
+            if self.request_body_entity:
+                content += StringUtils.indent_str('json=_entity.to_dict(),\n', 3)
+            elif self.array_body_type:
+                content += StringUtils.indent_str('json=values,\n', 3)
+
+        content += StringUtils.indent_str(')', 2)
+
+        if self.response_type:
+            content += '\n\n'
+            content += StringUtils.gen_comment('Validate response', 2)
+            content += '\n'
             content += StringUtils.indent_str(f'return {self.response_type}.schema().loads(raw)', 2)
+
         return content
 
     @property
@@ -218,13 +340,32 @@ class Endpoint:
             else:
                 print(f'UNHANDLED RESPONSE TYPE: {self.endpoint_name} - {response}')
             self.process_parameters()
+        elif self.post:
+            response = self.endpoint.post.responses['200']
+            if response.ref:
+                self.response_type = StringUtils.get_class_name_from_ref_str(response.ref)
+                self.imports.add_import(EntityImport(
+                    name=f'.{self.entities_path_name}',
+                    type=ImportType.relative,
+                    imports=[self.response_type]
+                ))
+                self.response_is_model = True
+                self.process_request_body()
+            else:
+                print(f'UNHANDLED RESPONSE TYPE: {self.endpoint_name} - {response}')
+            self.process_parameters()
         else:
             print(f'UNHANDLED ENDPOINT: {self.endpoint_name} - {self.endpoint}')
 
-    def get_type_from_param_schema(self, schema: Schema) -> tuple[str, bool]:
+    def gen_param(self, parameter: Parameter) -> EndpointParam:
+        is_enum = False
+        is_datetime = False
+        is_array = False
+        tp = None
+        schema = parameter.schema
         t = PropertyType(schema.type)
-        if t not in [PropertyType.object, PropertyType.array, PropertyType.string, PropertyType.integer]:
-            return t.python_type, False
+        if t in [PropertyType.boolean, PropertyType.number]:
+            tp = t.python_type
         elif t == PropertyType.integer:
             if schema.x_enum_reference:
                 ref_name = StringUtils.get_class_name_from_ref_str(schema.x_enum_reference.ref)
@@ -233,22 +374,50 @@ class Endpoint:
                     type=ImportType.relative,
                     imports=[ref_name]
                 ))
-                return ref_name, True
+                tp = ref_name
+                is_enum = True
             else:
-                return t.python_type, False
+                tp = t.python_type
+        elif t == PropertyType.string:
+            fmt = PropertyFormat(schema.format)
+            if fmt == PropertyFormat.none:
+                tp = PropertyType.string.python_type
+            elif fmt == PropertyFormat.datetime:
+                self.imports.add_import(EntityImport(
+                    name='datetime',
+                    type=ImportType.stdlib,
+                    imports=['datetime']
+                ))
+                tp = 'datetime'
+                is_datetime = True
+            else:
+                print(f'UNHANDLED STRING TYPE: {self.endpoint_name} - {parameter.name} - {fmt} - {schema}')
+        elif t == PropertyType.array:
+            is_array = True
+            if schema.items.x_enum_reference:
+                ref_name = StringUtils.get_class_name_from_ref_str(schema.items.x_enum_reference.ref)
+                self.imports.add_import(EntityImport(
+                    name=f'.{self.entities_path_name}',
+                    type=ImportType.relative,
+                    imports=[ref_name]
+                ))
+                tp = ref_name
+                is_enum = True
+            else:
+                print(f'UNHANDLED ARRAY TYPE: {self.endpoint_name} - {parameter.name} - {schema}')
         else:
             print(f'UNHANDLED PARAM SCHEMA TYPE: {self.endpoint_name} - {schema}')
             self.imports.add_import(EntityImport(name='typing', type=ImportType.stdlib, imports=['Any']))
-            return 'Any', False
+            tp = 'Any'
 
-    def gen_param(self, parameter: Parameter) -> EndpointParam:
-        t, is_enum = self.get_type_from_param_schema(parameter.schema)
         param = EndpointParam(
             name=parameter.name,
             required=parameter.required or False,
-            type=t,
+            type=tp,
             default=parameter.schema.default,
             is_enum=is_enum,
+            is_datetime=is_datetime,
+            is_array=is_array,
         )
         return param
 
@@ -283,6 +452,73 @@ class Endpoint:
             else:
                 print(f'UNHANDLED PARAMETER: {self.endpoint_name} - {parameter.name} - {parameter}')
 
+    def set_request_body(self, entity: Entity) -> None:
+        for prop in entity.properties:
+            if 'body' not in self.parameters:
+                self.parameters['body'] = []
+            if prop.optional:
+                self.imports.add_import(EntityImport(
+                    name='typing',
+                    type=ImportType.stdlib,
+                    imports=['Optional']
+                ))
+            if prop.enum or prop.forward_ref or any(s.isupper() for s in prop.type):
+                self.imports.add_import(EntityImport(
+                    name=f'.{self.entities_path_name}',
+                    type=ImportType.relative,
+                    imports=[prop.type]
+                ))
+            self.parameters['body'].append(EndpointParam(
+                name=prop.name,
+                # required=not prop.optional,
+                type=prop.field_type_required,
+                from_body=True,
+            ))
+        self.imports.add_import(EntityImport(
+            name=f'.{self.entities_path_name}',
+            type=ImportType.relative,
+            imports=[entity.name_safe]
+        ))
+        self.request_body_entity = entity
+
+    def set_array_request_body(self, type: str) -> None:
+        if 'body' not in self.parameters:
+            self.parameters['body'] = []
+        self.array_body_type = f'list[{type}]'
+        self.parameters['body'].append(EndpointParam(
+            name='values',
+            type=type,
+            is_array=True,
+            from_body=True,
+        ))
+
+    def process_request_body(self) -> None:
+        if self.request_body:
+            content = self.request_body.content
+            for c_type, media in content.items():
+                if c_type == 'application/json':
+                    if isinstance(media.schema, Reference):
+                        ref_name = StringUtils.get_class_name_from_ref_str(media.schema.ref)
+                        for e in self.entities.entities:
+                            if e.name_safe == ref_name:
+                                self.set_request_body(e)
+                                break
+                        if 'body' not in self.parameters:
+                            print(f'REF NAME NOT FOUND: {self.endpoint_name} - {ref_name} - {media}')
+                    elif isinstance(media.schema, Schema):
+                        if PropertyType(media.schema.type) == PropertyType.array:
+                            tp = PropertyType(media.schema.items.type)
+                            if tp == PropertyType.integer and not media.schema.items.x_enum_reference:
+                                self.set_array_request_body(tp.python_type)
+                            else:
+                                print(f'MEDIA SCHEMA ARRAY TYPE NOT HANDLED: {self.endpoint_name} - {tp} - {media}')
+                        else:
+                            print(f'MEDIA SCHEMA TYPE NOT HANDLED: {self.endpoint_name} - {media.schema.type} - {media}')
+                    else:
+                        print(f'MEDIA TYPE NOT HANDLED: {self.endpoint_name} - {media}')
+                else:
+                    print(f'UNHANDLED REQUEST BODY TYPE: {self.endpoint_name} - {c_type} - {self.request_body}')
+
 
 class EndpointCollection:
     entity_path_name = 'entities'
@@ -301,10 +537,6 @@ class EndpointCollection:
         self.bungie_root = bungie_root
         self.sync_imports = EntityImportCollection([
             EntityImport(
-                name='requests',
-                type=ImportType.external,
-            ),
-            EntityImport(
                 name=f'.{self.sync_client_file_name}',
                 type=ImportType.relative,
                 imports=[self.sync_client_name],
@@ -312,10 +544,6 @@ class EndpointCollection:
             ),
         ])
         self.async_imports = EntityImportCollection([
-            EntityImport(
-                name='aiohttp',
-                type=ImportType.external,
-            ),
             EntityImport(
                 name=f'.{self.async_client_file_name}',
                 type=ImportType.relative,
@@ -414,12 +642,12 @@ class EndpointCollection:
         content += '\n'
         return content
 
-    def add_endpoint(self, path: str, endpoint: PathItem) -> None:
-        sync_endpoint = Endpoint(path, endpoint, False)
+    def add_endpoint(self, path: str, endpoint: PathItem, entities: EntityCollection) -> None:
+        sync_endpoint = Endpoint(path, endpoint, entities, False)
         self.sync_endpoints.append(sync_endpoint)
         self.sync_imports.add_collection(sync_endpoint.imports)
 
-        async_endpoint = Endpoint(path, endpoint, True)
+        async_endpoint = Endpoint(path, endpoint, entities, True)
         self.async_endpoints.append(async_endpoint)
         self.async_imports.add_collection(async_endpoint.imports)
 
