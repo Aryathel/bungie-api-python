@@ -12,6 +12,7 @@ class EntityImport:
     imports: list[str] = field(default=None)
     self_ref: bool = field(default=False)
     alias: Optional[str] = field(default=None)
+    type_check: bool = field(default=False)
 
     @property
     def specific(self) -> bool:
@@ -62,7 +63,7 @@ class EntityImportCollection:
 
     def add_import(self, imp: EntityImport) -> None:
         for i in self.imports:
-            if i.name == imp.name and i.type == imp.type:
+            if i.name == imp.name and i.type == imp.type and i.imports:
                 for i_i in imp.imports:
                     if i_i not in i.imports:
                         i.imports.append(i_i)
@@ -80,22 +81,33 @@ class EntityImportCollection:
 
     @property
     def stdlib_imports(self) -> list[str]:
-        return [i.import_string for i in self.imports_sorted if i.type == ImportType.stdlib and not i.self_ref]
+        return [i.import_string for i in self.imports_sorted if i.type == ImportType.stdlib and not i.self_ref and not i.type_check]
 
     @property
     def external_imports(self) -> list[str]:
-        return [i.import_string for i in self.imports_sorted if i.type == ImportType.external and not i.self_ref]
+        return [i.import_string for i in self.imports_sorted if i.type == ImportType.external and not i.self_ref and not i.type_check]
 
     @property
     def internal_imports(self) -> list[str]:
-        return [i.import_string for i in self.imports_sorted if i.type == ImportType.internal and not i.self_ref]
+        return [i.import_string for i in self.imports_sorted if i.type == ImportType.internal and not i.self_ref and not i.type_check]
 
     @property
     def relative_imports(self) -> list[str]:
-        return [i.import_string for i in self.imports_sorted if i.type == ImportType.relative and not i.self_ref]
+        return [i.import_string for i in self.imports_sorted if i.type == ImportType.relative and not i.self_ref and not i.type_check]
+
+    @property
+    def type_check_imports(self) -> list[str]:
+        return [i.import_string for i in self.imports_sorted if i.type_check and not i.self_ref]
 
     @property
     def formatted_imports(self) -> str:
+        if self.type_check_imports:
+            self.add_import(EntityImport(
+                name='typing',
+                type=ImportType.stdlib,
+                imports=['TYPE_CHECKING'],
+            ))
+
         imports = ''
 
         if self.stdlib_imports:
@@ -120,6 +132,13 @@ class EntityImportCollection:
             imports += StringUtils.gen_line_break_comment('INTERNAL LIBRARY IMPORTS')
             imports += '\n'
             imports += '\n'.join(self.relative_imports)
+            imports += '\n\n'
+
+        if self.type_check_imports:
+            imports += StringUtils.gen_line_break_comment('TYPING IMPORTS')
+            imports += '\n'
+            imports += 'if TYPE_CHECKING:\n'
+            imports += '\n'.join(StringUtils.indent_str(i, 1) for i in self.type_check_imports)
             imports += '\n\n'
 
         return imports

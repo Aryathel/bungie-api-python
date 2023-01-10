@@ -4,8 +4,9 @@ import os
 import requests
 from alive_progress import alive_bar
 
-from generator.models.openapi.schema import Schema
-from .models.entity import Entity, EntityCollection
+from generator.models.client import Client
+from .models.endpoints import EndpointCollection
+from .models.entity import EntityCollection
 from .models.enum_class import EnumCollection
 from .utils.str_utils import StringUtils
 from .models.entity_import import EntityImport, EntityImportCollection
@@ -20,6 +21,7 @@ class APIGenerator:
     max_line_length = 120
     generated_path = './generated'
     entities_path_name = 'entities'
+    endpoints_path_name = 'endpoints'
     utils_path_name = 'utils'
     file_extension = '.py'
 
@@ -58,12 +60,17 @@ class APIGenerator:
 
     enums: EnumCollection
     entities: EntityCollection
+    responses: EntityCollection
+    endpoints: dict[str, EndpointCollection]
+    clients: list[Client]
 
     def __init__(self):
         self.spec = self.load_spec()
         self.enums = EnumCollection()
         self.entities = EntityCollection()
         self.responses = EntityCollection()
+        self.endpoints = {}
+        self.clients = []
 
     @staticmethod
     def load_spec() -> OpenApi:
@@ -83,8 +90,18 @@ class APIGenerator:
         if not os.path.exists(entity_base):
             os.mkdir(entity_base)
 
+        # Create utils subdir
+        utils_base = os.path.join(cls.generated_path, cls.utils_path_name)
+        if not os.path.exists(utils_base):
+            os.mkdir(utils_base)
+
+        # Create endpoints subdir
+        endpoints_base = os.path.join(cls.generated_path, cls.endpoints_path_name)
+        if not os.path.exists(endpoints_base):
+            os.mkdir(endpoints_base)
+
     def write_init(self) -> None:
-        with open(os.path.join(self.generated_path, '__init__.py'), 'w+') as proj_init:
+        with open(os.path.join(self.generated_path, '__init__.py'), 'w+'):
             pass
 
         with open(
@@ -107,12 +124,46 @@ class APIGenerator:
             content += '\n'
             content += '\n'.join(self.responses.init_imports)
             content += '\n\n'
+
+            entity_init.write(content)
+
+        with open(
+            os.path.join(
+                self.generated_path,
+                self.endpoints_path_name,
+                '__init__.py',
+            ),
+            'w+',
+        ) as endpoint_init:
+            imports = EntityImportCollection()
+            names = []
+            for endpoint in self.endpoints.values():
+                imports.add_collection(endpoint.init_imports)
+                names.append(endpoint.name_sync)
+                names.append(endpoint.name_async)
+            content = StringUtils.gen_line_break_comment('ENDPOINT IMPORTS')
+            content += '\n'
+            content += '\n'.join(i.import_string for i in imports.imports_sorted)
+            content += '\n\n\n'
             content += '__all__ = ' + json.dumps(
-                self.enums.enum_names + self.entities.entity_names + self.responses.entity_names,
+                names,
                 indent=2
             )
             content += '\n'
-            entity_init.write(content)
+
+            endpoint_init.write(content)
+
+        with open(os.path.join(self.generated_path, '__init__.py'), 'w+') as client_init:
+            names = [c.name for c in self.clients]
+            imports = [c.init_string for c in self.clients]
+
+            content = StringUtils.gen_line_break_comment('CLIENT IMPORTS')
+            content += '\n'
+            content += '\n'.join(imports)
+            content += '\n\n\n'
+            content += '__all__ = ' + json.dumps(names, indent=2)
+            content += '\n'
+            client_init.write(content)
 
     def gen_entities(self) -> None:
         # Ensure that the necessary folders exist.
@@ -170,6 +221,50 @@ class APIGenerator:
             self.entities_path_name,
             self.responses_model_file + self.file_extension
         ))
+
+    def gen_endpoints(self) -> None:
+        # Ensure that the necessary folders exist
+        self.process_namespace()
+
+        # Process path schemas
+        with alive_bar(
+                len(self.spec.paths),
+                force_tty=True,
+                title='ENDPOINTS',
+                title_length=21
+        ) as bar:
+            for path, endpoint in self.spec.paths.items():
+                coll_name = endpoint.summary.split('.')[0]
+                if not coll_name:
+                    coll_name = 'Core'
+                if coll_name not in self.endpoints:
+                    self.endpoints[coll_name] = EndpointCollection(coll_name, bungie_root=self.spec.servers[0])
+                self.endpoints[coll_name].add_endpoint(path, endpoint)
+                bar()
+
+            for name, collection in self.endpoints.items():
+                collection.write_files(os.path.join(self.generated_path, self.endpoints_path_name))
+
+    def gen_clients(self) -> None:
+        # Ensure that the necessary folders exist
+        self.process_namespace()
+
+        # Create client classes for async and async
+        with alive_bar(
+            2,
+            force_tty=True,
+            title='CLIENTS',
+            title_length=21,
+        ) as bar:
+            sync_client = Client(False, list(self.endpoints.values()))
+            sync_client.write_file(self.generated_path)
+            self.clients.append(sync_client)
+            bar()
+
+            async_client = Client(True, list(self.endpoints.values()))
+            async_client.write_file(self.generated_path)
+            self.clients.append(async_client)
+            bar()
 
     def gen_readme(self) -> None:
         readme_count = 1
@@ -313,6 +408,8 @@ class APIGenerator:
         self.gen_utils()
         self.gen_entities()
         self.gen_responses()
+        self.gen_endpoints()
+        self.gen_clients()
         self.write_init()
 
 

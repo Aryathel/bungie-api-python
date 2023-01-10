@@ -1,4 +1,5 @@
 import re
+from typing import Optional, Any
 
 
 class StringUtils:
@@ -24,6 +25,23 @@ class StringUtils:
                 return f'class {class_name}({inheritance}):'
             else:
                 return f'class {class_name}({", ".join(inheritance)}):'
+
+    @classmethod
+    def gen_function_declaration(
+            cls,
+            func_name: str,
+            params: Optional[list[str]] = None,
+            response_type: Optional[str] = None,
+            is_async: bool = False,
+            depth: int = 0,
+    ) -> str:
+        dec = f'{cls.indent * depth}{"async " if is_async else ""}def {func_name}({", ".join(params)})' \
+               f'{" -> " + response_type if response_type else ""}:'
+        if len(dec) > cls.max_line_length:
+            dec = f'{cls.indent * depth}{"async " if is_async else ""}def {func_name}(\n'
+            dec += '\n'.join(f'{cls.indent * (depth+2)}{p},' for p in params)
+            dec += f'\n{cls.indent * depth}{") -> " + response_type if response_type else ")"}:'
+        return dec
 
     @classmethod
     def indent_str(cls, content: str, depth: int):

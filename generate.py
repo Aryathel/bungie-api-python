@@ -1,21 +1,33 @@
-import requests
+import os
+import unittest
 
 from generator.main import APIGenerator
 
 
-def main():
-    from generated.entities.responses import IEnumerableOfApplication
-    r = requests.get('https://www.bungie.net/Platform/App/FirstParty/', headers={'X-API-Key': 'cfdc38c75e4440f2ae8c581a998ed4d5'})
-    r.raise_for_status()
-    print(IEnumerableOfApplication.schema().load(r.json()))
+class Test(unittest.IsolatedAsyncioTestCase):
+    async def test_get_bungie_applications(self):
+        from generated import BungieClientAsync, BungieClientSync
+
+        client_a = BungieClientAsync(api_key=os.getenv('BUNGIE_API_KEY'))
+        apps = await client_a.app.get_bungie_applications()
+
+        client_s = BungieClientSync(api_key=os.getenv('BUNGIE_API_KEY'))
+        apps_s = client_s.app.get_bungie_applications()
+        assert apps == apps_s
 
 
 if __name__ == "__main__":
     gen = APIGenerator()
 
-    gen.gen_readme()
-    gen.gen_utils()
-    gen.gen_entities()
-    gen.gen_responses()
-    gen.write_init()
-    main()
+    # Running gen.gen() covers all of these individual calls.
+    # gen.gen_readme()
+    # gen.gen_utils()
+    # gen.gen_entities()
+    # gen.gen_responses()
+    # gen.gen_endpoints()
+    # gen.gen_clients()
+    # gen.write_init()
+
+    gen.gen()
+
+    # unittest.main()
