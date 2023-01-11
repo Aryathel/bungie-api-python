@@ -45,4 +45,4 @@ jobs:
           BUNGIE_CLIENT_TYPE: ${{ secrets.BUNGIE_CLIENT_TYPE }}
           BUNGIE_OAUTH_CODE: ${{ secrets.BUNGIE_OAUTH_CODE }}
         run:
-          pipenv run python -m tests/automated
+          pipenv run python tests\automated.py

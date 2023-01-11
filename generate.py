@@ -5,13 +5,13 @@ if __name__ == "__main__":
     gen = APIGenerator()
 
     # Running gen.gen() covers all of these individual calls.
-    # gen.gen_readme()
-    # gen.gen_utils()
-    # gen.gen_entities()
-    # gen.gen_responses()
-    # gen.gen_security()
-    # gen.gen_endpoints()
-    # gen.gen_clients()
-    # gen.write_init()
+    # self.gen_entities()
+    # self.gen_readme()
+    # self.gen_utils()
+    # self.gen_responses()
+    # self.gen_endpoints()
+    # self.gen_security()
+    # self.gen_clients()
+    #self.write_init()
 
     gen.gen()
