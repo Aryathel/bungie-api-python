@@ -34,12 +34,15 @@ jobs:
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
           # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-      - name: Test with Unittest
+      - name: Generate Client Library
+        run: |
+          pipenv run python -m generate
+      - name: Test With Unittest
         env:
           BUNGIE_API_KEY: ${{ secrets.BUNGIE_API_KEY }}
           BUNGIE_CLIENT_ID: ${{ secrets.BUNGIE_CLIENT_ID }}
           BUNGIE_CLIENT_SECRET: ${{ secrets.BUNGIE_CLIENT_SECRET }}
           BUNGIE_CLIENT_TYPE: ${{ secrets.BUNGIE_CLIENT_TYPE }}
           BUNGIE_OAUTH_CODE: ${{ secrets.BUNGIE_OAUTH_CODE }}
-        run: |
-          pipenv run python -m generate
+        run:
+          pipenv run python -m tests/automated

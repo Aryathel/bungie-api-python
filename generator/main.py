@@ -582,12 +582,14 @@ class APIGenerator:
                 bar()
 
     def gen(self) -> None:
+        self.process_namespace()
+
+        self.gen_entities()
         self.gen_readme()
         self.gen_utils()
-        self.gen_security()
-        self.gen_entities()
         self.gen_responses()
         self.gen_endpoints()
+        self.gen_security()
         self.gen_clients()
         self.write_init()
 
