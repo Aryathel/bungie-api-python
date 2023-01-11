@@ -43,7 +43,7 @@ class BungieClientSync(
         # OAuth access token not set.
         if self._access_token is None:
             raise OAuthContextNotFoundException(
-                "No OAuth context was found."
+                "No OAuth context was found. "
                 "Try using the client's 'create_oauth_context' or 'set_oauth_context' method, "
                 "then try using this method again."
             )

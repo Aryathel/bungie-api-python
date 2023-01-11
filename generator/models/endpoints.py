@@ -107,6 +107,8 @@ class Endpoint:
     response_is_model: bool
     request_body_entity: Entity | None
     array_body_type: str | None
+    requires_oauth: bool
+    oauth_scopes: list[str] | None
 
     entities_path_name = 'entities'
     bungie_root_var = '{bungie_root}'
@@ -129,6 +131,8 @@ class Endpoint:
         self.response_is_model = False
         self.request_body_entity = None
         self.array_body_type = None
+        self.requires_oauth = False
+        self.oauth_scopes = None
 
         self.process_endpoint()
 
@@ -138,7 +142,12 @@ class Endpoint:
 
     @property
     def description(self) -> str:
-        return self.endpoint.description
+        desc = self.endpoint.description
+        if self.requires_oauth:
+            desc += '\n\n'
+            desc += f'Requires OAuth Scopes:\n'
+            desc += f'- {", ".join(self.oauth_scopes)}'
+        return desc
 
     @property
     def get(self) -> bool:
@@ -305,6 +314,8 @@ class Endpoint:
                 content += StringUtils.indent_str('json=_entity.to_dict(),\n', 3)
             elif self.array_body_type:
                 content += StringUtils.indent_str('json=values,\n', 3)
+        if self.requires_oauth:
+            content += StringUtils.indent_str('requires_oauth=True,\n', 3)
 
         content += StringUtils.indent_str(')', 2)
 
@@ -322,7 +333,6 @@ class Endpoint:
         content += '\n'
         content += StringUtils.gen_docstring(self.description, 2)
         content += '\n'
-        # TODO: ADD FUNCTION BODY
         content += self.endpoint_body
         return content
 
@@ -337,6 +347,14 @@ class Endpoint:
                     imports=[self.response_type]
                 ))
                 self.response_is_model = True
+                if self.endpoint.get.security:
+                    for security in self.endpoint.get.security:
+                        for t, scopes in security.items():
+                            if t == 'oauth2':
+                                self.requires_oauth = True
+                                self.oauth_scopes = scopes
+                            else:
+                                print(f'UNHANDLED SECURITY TYPE: {self.endpoint_name} - {t}')
             else:
                 print(f'UNHANDLED RESPONSE TYPE: {self.endpoint_name} - {response}')
             self.process_parameters()
@@ -351,6 +369,14 @@ class Endpoint:
                 ))
                 self.response_is_model = True
                 self.process_request_body()
+                if self.endpoint.post.security:
+                    for security in self.endpoint.post.security:
+                        for t, scopes in security.items():
+                            if t == 'oauth2':
+                                self.requires_oauth = True
+                                self.oauth_scopes = scopes
+                            else:
+                                print(f'UNHANDLED SECURITY TYPE: {self.endpoint_name} - {t}')
             else:
                 print(f'UNHANDLED RESPONSE TYPE: {self.endpoint_name} - {response}')
             self.process_parameters()
@@ -520,6 +546,199 @@ class Endpoint:
                     print(f'UNHANDLED REQUEST BODY TYPE: {self.endpoint_name} - {c_type} - {self.request_body}')
 
 
+class OAuthEndpoint:
+    utils_path_name = 'utils'
+    oauth_utils_name = 'oauth_utils'
+
+    response_type = 'AccessToken'
+    client_type_enum = 'OAuthClientType'
+
+    refresh_token_meth = 'RefreshAccessToken'
+    refresh_token_doc = 'Gets a new access token from a refresh token.'
+    refresh_method = 'post'
+    access_token_meth = 'GetAccessToken'
+    access_token_doc = 'Gets a new access token from a authorization code.'
+    access_method = 'post'
+
+    def __init__(
+            self,
+            path: str,
+            is_async: bool = False,
+            is_refresh: bool = False,
+    ) -> None:
+        self.path = path
+        self.is_async = is_async
+        self.is_refresh = is_refresh
+
+    @property
+    def method(self) -> str:
+        if self.is_refresh:
+            return self.refresh_method
+        else:
+            return self.access_method
+
+    @property
+    def name(self) -> str:
+        if self.is_refresh:
+            return self.refresh_token_meth
+        else:
+            return self.access_token_meth
+
+    @property
+    def func_name(self) -> str:
+        return StringUtils.camel_to_snake(self.name)
+
+    @property
+    def description(self) -> str:
+        if self.is_refresh:
+            return self.refresh_token_doc
+        else:
+            return self.access_token_doc
+
+    @property
+    def parameters(self) -> dict[str, list[EndpointParam]]:
+        params = {'core': [EndpointParam(name='self')]}
+
+        if self.is_refresh:
+            params['core'].append(EndpointParam(name='refresh_token', type='str'))
+        else:
+            params['core'].append(EndpointParam(name='code', type='str'))
+
+        return params
+
+    @property
+    def imports(self) -> EntityImportCollection:
+        imps = EntityImportCollection([EntityImport(
+            name=f'.{self.utils_path_name}.{self.oauth_utils_name}',
+            type=ImportType.relative,
+            imports=[self.response_type, self.client_type_enum, 'OAuthInformationNotProvided'],
+        )])
+
+        if self.is_async:
+            imps.add_import(EntityImport(name='aiohttp', type=ImportType.external, imports=['BasicAuth']))
+        else:
+            imps.add_import(EntityImport(name='requests.auth', type=ImportType.external, imports=['HTTPBasicAuth']))
+
+        return imps
+
+    @property
+    def func_definition(self) -> str:
+        required_params = []
+        default_params = []
+        optional_params = []
+
+        for ps in self.parameters.values():
+            for p in ps:
+                if p.required:
+                    if p.default:
+                        default_params.append(p.declaration)
+                    else:
+                        required_params.append(p.declaration)
+                else:
+                    optional_params.append(p.declaration)
+
+        return StringUtils.gen_function_declaration(
+            func_name=self.func_name,
+            params=required_params + default_params + optional_params,
+            response_type=self.response_type,
+            is_async=self.is_async,
+            depth=1,
+        )
+
+    @property
+    def endpoint_body(self) -> str:
+        content = ''
+        if self.is_refresh:
+            content += StringUtils.indent_str('if not self._parent.oauth_type == OAuthClientType.Confidential:\n', 2)
+            content += StringUtils.indent_str('raise OAuthInformationNotProvided(\n', 3)
+            content += StringUtils.indent_str(
+                '"You must provide a \'client_secret\' to the client \"\n',
+                4,
+            )
+            content += StringUtils.indent_str('"in order to refresh an OAuth token."\n', 4)
+        else:
+            content += StringUtils.indent_str('if self._parent.oauth_type == OAuthClientType.NotApplicable:\n', 2)
+            content += StringUtils.indent_str('raise OAuthInformationNotProvided(\n', 3)
+            content += StringUtils.indent_str(
+                '"You must provide a \'client_id\' and optionally a \'client_secret\' \"\n',
+                4,
+            )
+            content += StringUtils.indent_str('"to the client in order to use OAuth endpoints."\n', 4)
+        content += StringUtils.indent_str(')\n', 3)
+        content += '\n'
+
+
+        if self.is_refresh:
+            content += StringUtils.indent_str('headers = {\n', 2)
+            content += StringUtils.indent_str('\'Content-Type\': \'application/x-www-form-urlencoded\',\n', 3)
+            content += StringUtils.indent_str('}\n', 2)
+            content += StringUtils.indent_str('body = {\n', 2)
+            content += StringUtils.indent_str('\'grant_type\': \'refresh_token\',\n', 3)
+            content += StringUtils.indent_str('\'refresh_token\': refresh_token,\n', 3)
+            content += StringUtils.indent_str('}\n', 2)
+            if self.is_async:
+                content += StringUtils.indent_str(
+                    'auth = BasicAuth(str(self._parent.client_id), self._parent.client_secret)\n',
+                    2
+                )
+                content += '\n'
+                content += StringUtils.indent_str(f'raw = await self._parent._{self.method}(\n', 2)
+            else:
+                content += StringUtils.indent_str(
+                    'auth = HTTPBasicAuth(str(self._parent.client_id), self._parent.client_secret)\n',
+                    2
+                )
+                content += '\n'
+                content += StringUtils.indent_str(f'raw = self._parent._{self.method}(\n', 2)
+        else:
+            content += StringUtils.indent_str('headers = {\n', 2)
+            content += StringUtils.indent_str('\'Content-Type\': \'application/x-www-form-urlencoded\',\n', 3)
+            content += StringUtils.indent_str('}\n', 2)
+            content += StringUtils.indent_str('body = {\n', 2)
+            content += StringUtils.indent_str('\'grant_type\': \'authorization_code\',\n', 3)
+            content += StringUtils.indent_str('\'code\': code,\n', 3)
+            content += StringUtils.indent_str('}\n', 2)
+            content += StringUtils.indent_str('auth = None\n', 2)
+            content += '\n'
+            content += StringUtils.indent_str(f'if self._parent.oauth_type == {self.client_type_enum}.Public:\n', 2)
+            content += StringUtils.indent_str('body.update({\'client_id\': self._parent.client_id})\n', 3)
+            content += StringUtils.indent_str(
+                f'elif self._parent.oauth_type == {self.client_type_enum}.Confidential:\n',
+                2
+            )
+            if self.is_async:
+                content += StringUtils.indent_str(
+                    'auth = BasicAuth(str(self._parent.client_id), self._parent.client_secret)\n',
+                    3
+                )
+                content += '\n'
+                content += StringUtils.indent_str(f'raw = await self._parent._{self.method}(\n', 2)
+            else:
+                content += StringUtils.indent_str(
+                    'auth = HTTPBasicAuth(str(self._parent.client_id), self._parent.client_secret)\n',
+                    3
+                )
+                content += '\n'
+                content += StringUtils.indent_str(f'raw = self._parent._{self.method}(\n', 2)
+        content += StringUtils.indent_str(f'\'{self.path}\',\n', 3)
+        content += StringUtils.indent_str(f'headers=headers,\n', 3)
+        content += StringUtils.indent_str(f'data=body,\n', 3)
+        content += StringUtils.indent_str(f'auth=auth,\n', 3)
+        content += StringUtils.indent_str(')\n', 2)
+        content += '\n'
+        content += StringUtils.indent_str(f'return {self.response_type}.schema().loads(raw)', 2)
+        return content
+
+    @property
+    def formatted_endpoint(self) -> str:
+        content = self.func_definition
+        content += '\n'
+        content += StringUtils.gen_docstring(self.description, 2)
+        content += '\n'
+        content += self.endpoint_body
+        return content
+
+
 class EndpointCollection:
     entity_path_name = 'entities'
     endpoints_path_name = 'endpoints'
@@ -529,8 +748,8 @@ class EndpointCollection:
     sync_client_file_name = 'client_sync'
     async_client_file_name = 'client_async'
 
-    sync_endpoints: list[Endpoint]
-    async_endpoints: list[Endpoint]
+    sync_endpoints: list[Endpoint | OAuthEndpoint]
+    async_endpoints: list[Endpoint | OAuthEndpoint]
 
     def __init__(self, name: str, bungie_root: Server):
         self.name = name
@@ -648,6 +867,15 @@ class EndpointCollection:
         self.sync_imports.add_collection(sync_endpoint.imports)
 
         async_endpoint = Endpoint(path, endpoint, entities, True)
+        self.async_endpoints.append(async_endpoint)
+        self.async_imports.add_collection(async_endpoint.imports)
+
+    def add_oauth_endpoint(self, path: str, is_refresh: bool) -> None:
+        sync_endpoint = OAuthEndpoint(path, False, is_refresh)
+        self.sync_endpoints.append(sync_endpoint)
+        self.sync_imports.add_collection(sync_endpoint.imports)
+
+        async_endpoint = OAuthEndpoint(path, True, is_refresh)
         self.async_endpoints.append(async_endpoint)
         self.async_imports.add_collection(async_endpoint.imports)
 

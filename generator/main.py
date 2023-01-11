@@ -1,5 +1,6 @@
 import json
 import os
+from typing import Optional
 
 import requests
 from alive_progress import alive_bar
@@ -30,6 +31,7 @@ class APIGenerator:
     enum_utils_file = 'enum_utils'
     byte_utils_file = 'byte_utils'
     union_field_file = 'union_field'
+    oauth_util_file = 'oauth_utils'
     entity_model_file = 'models'
     enum_model_file = 'enums'
     responses_model_file = 'responses'
@@ -64,6 +66,13 @@ class APIGenerator:
     endpoints: dict[str, EndpointCollection]
     clients: list[Client]
 
+    oauth_url: Optional[str]
+    token_url: Optional[str]
+    refresh_url: Optional[str]
+    oauth_scopes: Optional[dict[str, str]]
+    api_key_header: Optional[str]
+    api_key_var: Optional[str]
+
     def __init__(self):
         self.spec = self.load_spec()
         self.enums = EnumCollection()
@@ -71,6 +80,13 @@ class APIGenerator:
         self.responses = EntityCollection()
         self.endpoints = {}
         self.clients = []
+
+        self.oauth_url = None
+        self.token_url = None
+        self.refresh_url = None
+        self.oauth_scopes = None
+        self.api_key_var = None
+        self.api_key_header = None
 
     @staticmethod
     def load_spec() -> OpenApi:
@@ -173,7 +189,7 @@ class APIGenerator:
         with alive_bar(
                 len(self.spec.components.schemas),
                 force_tty=True,
-                title='COMPONENTS: SCHEMAS',
+                title='SCHEMAS',
                 title_length=21
         ) as bar:
             for k, schema in self.spec.components.schemas.items():
@@ -205,7 +221,7 @@ class APIGenerator:
         with alive_bar(
                 len(self.spec.components.responses),
                 force_tty=True,
-                title='COMPONENTS: RESPONSES',
+                title='RESPONSES',
                 title_length=21
         ) as bar:
             for k, response in self.spec.components.responses.items():
@@ -256,12 +272,24 @@ class APIGenerator:
             title='CLIENTS',
             title_length=21,
         ) as bar:
-            sync_client = Client(False, list(self.endpoints.values()))
+            sync_client = Client(
+                False,
+                self.api_key_var,
+                self.api_key_header,
+                self.oauth_url,
+                list(self.endpoints.values())
+            )
             sync_client.write_file(self.generated_path)
             self.clients.append(sync_client)
             bar()
 
-            async_client = Client(True, list(self.endpoints.values()))
+            async_client = Client(
+                True,
+                self.api_key_var,
+                self.api_key_header,
+                self.oauth_url,
+                list(self.endpoints.values())
+            )
             async_client.write_file(self.generated_path)
             self.clients.append(async_client)
             bar()
@@ -297,7 +325,7 @@ class APIGenerator:
             bar()
 
     def gen_utils(self) -> None:
-        util_count = 1
+        util_count = 2
         with alive_bar(util_count, title='UTIL FILES', force_tty=True, title_length=21) as bar:
 
             # Ensure path and default files exist.
@@ -309,11 +337,11 @@ class APIGenerator:
                 with open(os.path.join(self.generated_path, self.utils_path_name, '__init__.py'), 'w+') as f:
                     f.write('')
 
+            # Union field utils
             with open(
                     os.path.join(self.generated_path, self.utils_path_name, self.union_field_file + self.file_extension),
                     'w+'
             ) as f:
-                # Byte util imports
                 imports = EntityImportCollection([
                     EntityImport(name='typing', type=ImportType.stdlib, alias='t'),
                     EntityImport(name='marshmallow', type=ImportType.external),
@@ -403,9 +431,160 @@ class APIGenerator:
                 f.write(content)
             bar()
 
+            with open(
+                os.path.join(self.generated_path, self.utils_path_name, self.oauth_util_file + self.file_extension),
+                'w+'
+            ) as f:
+                imports = EntityImportCollection([
+                    EntityImport(name='datetime', type=ImportType.stdlib, imports=['datetime', 'timedelta']),
+                    EntityImport(name='dataclasses', type=ImportType.stdlib, imports=['dataclass', 'field']),
+                    EntityImport(name='dataclasses_json', type=ImportType.external, imports=['dataclass_json']),
+                    EntityImport(name='typing', type=ImportType.stdlib, imports=['Optional']),
+                    EntityImport(name='enum', type=ImportType.stdlib, imports=['Enum']),
+                ])
+
+                content = imports.formatted_imports
+                content += '\n'
+
+                content += StringUtils.gen_class_declaration('OAuthException', ['Exception'])
+                content += '\n'
+                content += StringUtils.indent_str('pass\n', 1)
+                content += '\n\n'
+                content += StringUtils.gen_class_declaration('OAuthInformationNotProvided', ['OAuthException'])
+                content += '\n'
+                content += StringUtils.indent_str('pass\n', 1)
+                content += '\n\n'
+                content += StringUtils.gen_class_declaration('OAuthContextExpired', ['OAuthException'])
+                content += '\n'
+                content += StringUtils.indent_str('pass\n', 1)
+                content += '\n\n'
+                content += StringUtils.gen_class_declaration('OAuthContextNotFound', ['OAuthException'])
+                content += '\n'
+                content += StringUtils.indent_str('pass\n', 1)
+                content += '\n\n'
+                content += StringUtils.gen_class_declaration('OAuthInitFailure', ['OAuthException'])
+                content += '\n'
+                content += StringUtils.indent_str('pass\n', 1)
+                content += '\n\n'
+
+                content += StringUtils.gen_class_declaration('OAuthClientType', ['Enum'])
+                content += '\n'
+                content += StringUtils.indent_str('NotApplicable = 0\n', 1)
+                content += StringUtils.indent_str('Public = 1\n', 1)
+                content += StringUtils.indent_str('Confidential = 2\n', 1)
+                content += '\n\n'
+
+                content += '@dataclass_json\n'
+                content += '@dataclass(kw_only=True)\n'
+                content += StringUtils.gen_class_declaration('AccessToken')
+                content += '\n'
+                content += StringUtils.gen_comment('Standard Bungie fields.', 1)
+                content += '\n'
+                content += StringUtils.indent_str('access_token: str\n', 1)
+                content += StringUtils.indent_str('token_type: str\n', 1)
+                content += StringUtils.indent_str('expires_in: int\n', 1)
+                content += '\n'
+                content += StringUtils.gen_comment('Public OAuth applications do not include refresh information.', 1)
+                content += '\n'
+                content += StringUtils.indent_str('refresh_token: Optional[str] = field(default=None)\n', 1)
+                content += StringUtils.indent_str('refresh_expires_in: Optional[int] = field(default=None)\n', 1)
+                content += StringUtils.indent_str('membership_id: Optional[int] = field(default=None)\n', 1)
+                content += '\n'
+                content += StringUtils.gen_comment('Customer helper fields.', 1)
+                content += '\n'
+                content += StringUtils.indent_str('expires_at: Optional[datetime] = field(default=None)\n', 1)
+                content += StringUtils.indent_str('refresh_expires_at: Optional[datetime] = field(default=None)\n', 1)
+                content += '\n'
+                content += StringUtils.gen_function_declaration('__post_init__', ['self'], depth=1)
+                content += '\n'
+                content += StringUtils.indent_str('self.expires_in -= 5\n', 2)
+                content += StringUtils.indent_str('if self.refersh_expires_in:\n', 2)
+                content += StringUtils.indent_str('self.refresh_expires_in -= 5\n', 3)
+                content += StringUtils.indent_str(
+                    'self.expires_at = datetime.utcnow() + timedelta(seconds=self.expires_in)\n',
+                    2
+                )
+                content += StringUtils.indent_str('if self.refresh_expires_in:\n', 2)
+                content += StringUtils.indent_str(
+                    'self.refresh_expires_at = datetime.utcnow() + timedelta(seconds=self.refresh_expires_in)\n',
+                    3
+                )
+                content += '\n'
+
+                content += StringUtils.indent_str('@property\n', 1)
+                content += StringUtils.gen_function_declaration(
+                    'header',
+                    ['self'],
+                    'str',
+                    depth=1,
+                )
+                content += '\n'
+                content += StringUtils.indent_str(
+                    'return f\'{self.token_type} {self.access_token}\'\n',
+                    2
+                )
+                content += '\n'
+
+                content += StringUtils.indent_str('@property\n', 1)
+                content += StringUtils.gen_function_declaration(
+                    'is_expired',
+                    ['self'],
+                    'bool',
+                    depth=1,
+                )
+                content += '\n'
+                content += StringUtils.indent_str('if self.expires_at:\n', 2)
+                content += StringUtils.indent_str('return datetime.utcnow() >= self.expires_at\n', 3)
+                content += StringUtils.indent_str('else:\n', 2)
+                content += StringUtils.indent_str('return True\n', 3)
+                content += '\n'
+
+                content += StringUtils.indent_str('@property\n', 1)
+                content += StringUtils.gen_function_declaration(
+                    'is_refresh_expired',
+                    ['self'],
+                    'bool',
+                    depth=1,
+                )
+                content += '\n'
+                content += StringUtils.indent_str('if self.refresh_expires_at:\n', 2)
+                content += StringUtils.indent_str('return datetime.utcnow() >= self.refresh_expires_at\n', 3)
+                content += StringUtils.indent_str('else:\n', 2)
+                content += StringUtils.indent_str('return True\n', 3)
+
+                f.write(content)
+            bar()
+
+    def gen_security(self) -> None:
+        with alive_bar(
+            len(self.spec.components.securitySchemes),
+            title='SECURITY',
+            force_tty=True,
+            title_length=21,
+        ) as bar:
+            for name, scheme in self.spec.components.securitySchemes.items():
+                if name == 'oauth2':
+                    self.oauth_url = scheme.flows.authorizationCode.authorizationUrl
+                    self.token_url = scheme.flows.authorizationCode.tokenUrl
+                    self.refresh_url = scheme.flows.authorizationCode.refreshUrl
+                    self.oauth_scopes = scheme.flows.authorizationCode.scopes
+
+                    collection = EndpointCollection('Oauth', bungie_root=self.spec.servers[0])
+                    collection.add_oauth_endpoint(self.token_url, False)
+                    collection.add_oauth_endpoint(self.refresh_url, True)
+                    collection.write_files(os.path.join(self.generated_path, self.endpoints_path_name))
+                    self.endpoints['Oauth'] = collection
+                elif name == 'apiKey' and scheme.in_ == 'header':
+                    self.api_key_header = scheme.name
+                    self.api_key_var = StringUtils.camel_to_snake(scheme.type)
+                else:
+                    print(f'UNHANDLED SECURITY SCHEME: {name} - {scheme}')
+                bar()
+
     def gen(self) -> None:
         self.gen_readme()
         self.gen_utils()
+        self.gen_security()
         self.gen_entities()
         self.gen_responses()
         self.gen_endpoints()
