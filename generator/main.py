@@ -190,7 +190,7 @@ class APIGenerator:
                 len(self.spec.components.schemas),
                 force_tty=True,
                 title='SCHEMAS',
-                title_length=21
+                title_length=12
         ) as bar:
             for k, schema in self.spec.components.schemas.items():
                 # Handle enums
@@ -222,7 +222,7 @@ class APIGenerator:
                 len(self.spec.components.responses),
                 force_tty=True,
                 title='RESPONSES',
-                title_length=21
+                title_length=12
         ) as bar:
             for k, response in self.spec.components.responses.items():
                 if PropertyType(response.content['application/json'].schema.type) in (PropertyType.object, PropertyType.array):
@@ -247,7 +247,7 @@ class APIGenerator:
                 len(self.spec.paths),
                 force_tty=True,
                 title='ENDPOINTS',
-                title_length=21
+                title_length=12
         ) as bar:
             for path, endpoint in self.spec.paths.items():
                 coll_name = endpoint.summary.split('.')[0]
@@ -270,7 +270,7 @@ class APIGenerator:
             2,
             force_tty=True,
             title='CLIENTS',
-            title_length=21,
+            title_length=12,
         ) as bar:
             sync_client = Client(
                 False,
@@ -296,7 +296,7 @@ class APIGenerator:
 
     def gen_readme(self) -> None:
         readme_count = 1
-        with alive_bar(readme_count, title='README FILES', force_tty=True, title_length=21) as bar:
+        with alive_bar(readme_count, title='README FILES', force_tty=True, title_length=12) as bar:
             content = f'# {self.spec.info.title} - {self.spec.info.version}'
             content += '\n\n'
             content += '\n'.join(StringUtils.split_text_for_wrapping(self.spec.info.description))
@@ -326,7 +326,7 @@ class APIGenerator:
 
     def gen_utils(self) -> None:
         util_count = 2
-        with alive_bar(util_count, title='UTIL FILES', force_tty=True, title_length=21) as bar:
+        with alive_bar(util_count, title='UTIL FILES', force_tty=True, title_length=12) as bar:
 
             # Ensure path and default files exist.
             if not os.path.exists(self.generated_path):
@@ -498,7 +498,7 @@ class APIGenerator:
                 content += StringUtils.gen_function_declaration('__post_init__', ['self'], depth=1)
                 content += '\n'
                 content += StringUtils.indent_str('self.expires_in -= 5\n', 2)
-                content += StringUtils.indent_str('if self.refersh_expires_in:\n', 2)
+                content += StringUtils.indent_str('if self.refresh_expires_in:\n', 2)
                 content += StringUtils.indent_str('self.refresh_expires_in -= 5\n', 3)
                 content += StringUtils.indent_str(
                     'self.expires_at = datetime.utcnow() + timedelta(seconds=self.expires_in)\n',
@@ -560,7 +560,7 @@ class APIGenerator:
             len(self.spec.components.securitySchemes),
             title='SECURITY',
             force_tty=True,
-            title_length=21,
+            title_length=12,
         ) as bar:
             for name, scheme in self.spec.components.securitySchemes.items():
                 if name == 'oauth2':

@@ -18,13 +18,18 @@ class Entity:
         '@dataclass_json',
         '@dataclass(kw_only=True)',
     ]
+    default_entity_decorators_with_extra = [
+        '@dataclass_json(undefined=Undefined.INCLUDE)',
+        '@dataclass(kw_only=True)',
+    ]
 
     imports: EntityImportCollection
     properties: list[ClassProperty]
 
-    def __init__(self, qualified_name: str, schema: Schema) -> None:
+    def __init__(self, qualified_name: str, schema: Schema, allow_extra: bool = False) -> None:
         self.qualified_name = qualified_name
         self.schema = schema
+        self.allow_extra = allow_extra
 
         self.properties = []
         self.imports = EntityImportCollection([
@@ -44,6 +49,18 @@ class Entity:
                 imports=['Optional']
             )
         ])
+
+        if self.allow_extra:
+            self.imports.add_import(EntityImport(
+                name='dataclasses_json',
+                type=ImportType.external,
+                imports=['Undefined', 'CatchAll'],
+            ))
+            self.properties.append(ClassProperty(
+                name='extra_unknown_fields',
+                type='CatchAll',
+            ))
+
         self.generate_properties()
 
     @property
@@ -109,7 +126,10 @@ class Entity:
         # Standard entity model
         else:
             body.append(StringUtils.gen_line_break_comment(self.qualified_name))
-            body += self.default_entity_decorators.copy()
+            if self.allow_extra:
+                body += self.default_entity_decorators_with_extra.copy()
+            else:
+                body += self.default_entity_decorators.copy()
 
             # Attach the class declaration
             body.append(StringUtils.gen_class_declaration(self.name))
@@ -252,12 +272,24 @@ class Entity:
                 type=ImportType.relative,
                 imports=[enum_name]
             ))
-            self._add_property(ClassProperty(
-                name=name,
-                type=enum_name,
-                comment=prop.description,
-                optional=True,
-            ))
+            fmt = PropertyFormat(prop.format)
+            if not fmt == PropertyFormat.byte:
+                self._add_property(ClassProperty(
+                    name=name,
+                    type=enum_name,
+                    comment=prop.description,
+                    optional=True,
+                    enum=True,
+                ))
+            else:
+                self._add_property(ClassProperty(
+                    name=name,
+                    type=enum_name,
+                    comment=prop.description,
+                    optional=True,
+                    byte_enum=True,
+                    enum=True,
+                ))
         else:
             self._add_property(ClassProperty(
                 name=name,
@@ -280,11 +312,14 @@ class Entity:
             if not prop.x_dictionary_key:
                 raise TypeError(f'OBJECT SCHEMA PROPERTY HAS NO x-dictionary-key FIELD: {name} {prop}')
             enum_key = False
+            byte_enum = False
             if prop.x_dictionary_key.x_enum_reference:
                 ref_name = StringUtils.get_class_name_from_ref_str(prop.x_dictionary_key.x_enum_reference.ref)
                 self._add_import(EntityImport(name=self.enum_file_name, type=ImportType.relative, imports=[ref_name]))
                 key_type = ref_name
                 enum_key = True
+                if PropertyFormat(prop.x_dictionary_key.format) == PropertyFormat.byte:
+                    byte_enum = True
             else:
                 key_type = prop.x_dictionary_key.type
             if prop.additionalProperties.ref:
@@ -299,6 +334,7 @@ class Entity:
                     key_type=key_type,
                     forward_ref=True,
                     enum_key=enum_key,
+                    byte_enum=byte_enum,
                 ))
             elif additional_type == PropertyType.string:
                 self._add_property(ClassProperty(
@@ -309,6 +345,7 @@ class Entity:
                     dict=True,
                     key_type=key_type,
                     enum_key=enum_key,
+                    byte_enum=byte_enum,
                 ))
             elif additional_type == PropertyType.object:
                 self._add_import(EntityImport(name='typing', type=ImportType.stdlib, imports=['Any']))
@@ -320,6 +357,7 @@ class Entity:
                     key_type=key_type,
                     enum_key=enum_key,
                     dict=True,
+                    byte_enum=byte_enum,
                 ))
             elif prop.additionalProperties.x_enum_reference:
                 ref_name = StringUtils.get_class_name_from_ref_str(prop.additionalProperties.x_enum_reference.ref)
@@ -332,6 +370,7 @@ class Entity:
                     key_type=key_type,
                     enum_key=enum_key,
                     dict=True,
+                    byte_enum=byte_enum,
                 ))
             elif additional_type == PropertyType.integer:
                 self._add_property(ClassProperty(
@@ -341,6 +380,7 @@ class Entity:
                     optional=True,
                     key_type=key_type,
                     enum_key=enum_key,
+                    byte_enum=byte_enum,
                     dict=True,
                 ))
             elif additional_type == PropertyType.number:
@@ -352,6 +392,7 @@ class Entity:
                     dict=True,
                     key_type=key_type,
                     enum_key=enum_key,
+                    byte_enum=byte_enum,
                 ))
             elif additional_type == PropertyType.boolean:
                 self._add_property(ClassProperty(
@@ -362,6 +403,7 @@ class Entity:
                     dict=True,
                     key_type=key_type,
                     enum_key=enum_key,
+                    byte_enum=byte_enum,
                 ))
             elif additional_type == PropertyType.array:
                 if prop.additionalProperties.items and prop.additionalProperties.items.ref:
@@ -377,6 +419,7 @@ class Entity:
                         key_type=key_type,
                         forward_ref=True,
                         enum_key=enum_key,
+                        byte_enum=byte_enum,
                     ))
                 else:
                     print(f'UNHANDLED ADDITIONAL PROPERTIES ARRAY OBJECT ENTITY: {self.name} - {name} - {prop}')
@@ -532,11 +575,16 @@ class ResponseEntity(Entity):
             if not prop.x_dictionary_key:
                 raise TypeError(f'OBJECT SCHEMA PROPERTY HAS NO x-dictionary-key FIELD: {name} {prop}')
             enum_key = False
+            byte_enum = False
             if prop.x_dictionary_key.x_enum_reference:
                 ref_name = StringUtils.get_class_name_from_ref_str(prop.x_dictionary_key.x_enum_reference.ref)
                 self._add_import(EntityImport(name=self.enum_file_name, type=ImportType.relative, imports=[ref_name]))
                 key_type = ref_name
                 enum_key = True
+                if PropertyFormat(prop.x_dictionary_key.format) == PropertyFormat.byte:
+                    self._add_import(EntityImport(name='marshmallow', type=ImportType.external, imports=['fields']))
+                    self._add_import(EntityImport(name='dataclasses_json', type=ImportType.external, imports=['config']))
+                    byte_enum = True
             else:
                 key_type = prop.x_dictionary_key.type
             if prop.additionalProperties.ref:
@@ -550,6 +598,7 @@ class ResponseEntity(Entity):
                     dict=True,
                     key_type=key_type,
                     enum_key=enum_key,
+                    byte_enum=byte_enum,
                 ))
             elif additional_type == PropertyType.string:
                 self._add_property(ClassProperty(
@@ -560,6 +609,7 @@ class ResponseEntity(Entity):
                     dict=True,
                     key_type=key_type,
                     enum_key=enum_key,
+                    byte_enum=byte_enum,
                 ))
             elif additional_type == PropertyType.object:
                 self._add_import(EntityImport(name='typing', type=ImportType.stdlib, imports=['Any']))
@@ -570,6 +620,7 @@ class ResponseEntity(Entity):
                     optional=True,
                     key_type=key_type,
                     enum_key=enum_key,
+                    byte_enum=byte_enum,
                     dict=True,
                 ))
             elif prop.additionalProperties.x_enum_reference:
@@ -582,6 +633,7 @@ class ResponseEntity(Entity):
                     optional=True,
                     key_type=key_type,
                     enum_key=enum_key,
+                    byte_enum=byte_enum,
                     dict=True,
                 ))
             elif additional_type == PropertyType.integer:
@@ -592,6 +644,7 @@ class ResponseEntity(Entity):
                     optional=True,
                     key_type=key_type,
                     enum_key=enum_key,
+                    byte_enum=byte_enum,
                     dict=True,
                 ))
             elif additional_type == PropertyType.number:
@@ -603,6 +656,7 @@ class ResponseEntity(Entity):
                     dict=True,
                     key_type=key_type,
                     enum_key=enum_key,
+                    byte_enum=byte_enum,
                 ))
             elif additional_type == PropertyType.boolean:
                 self._add_property(ClassProperty(
@@ -613,6 +667,7 @@ class ResponseEntity(Entity):
                     dict=True,
                     key_type=key_type,
                     enum_key=enum_key,
+                    byte_enum=byte_enum,
                 ))
             elif additional_type == PropertyType.array:
                 if prop.additionalProperties.items and prop.additionalProperties.items.ref:
@@ -627,6 +682,7 @@ class ResponseEntity(Entity):
                         list=True,
                         key_type=key_type,
                         enum_key=enum_key,
+                        byte_enum=byte_enum,
                     ))
                 else:
                     print(f'UNHANDLED ADDITIONAL PROPERTIES ARRAY OBJECT ENTITY: {self.name} - {name} - {prop}')
@@ -641,9 +697,10 @@ class ResponseEntity(Entity):
                 optional=True,
             ))
         elif not prop.additionalProperties and not prop.allOf and not prop.x_enum_reference:
+            self.imports.add_import(EntityImport(name='typing', type=ImportType.stdlib, imports=['Any']))
             self._add_property(ClassProperty(
                 name=name,
-                type='dict',
+                type='Any',
                 comment=prop.description,
                 optional=True,
             ))
@@ -704,6 +761,7 @@ class ResponseEntity(Entity):
 class EntityCollection:
     entities: list[Entity | ResponseEntity]
     imports: EntityImportCollection
+    entities_with_extra = ['Queries.PagedQuery']
 
     def __init__(self):
         self.entities = []
@@ -746,7 +804,7 @@ class EntityCollection:
             e._update_placeholder_imports(self.placeholder_names)
 
     def add_entity(self, name: str, schema: Schema) -> None:
-        entity = Entity(name, schema)
+        entity = Entity(name, schema, name in self.entities_with_extra)
         self.imports.add_collection(entity.imports)
         self.entities.append(entity)
         self._update_placeholder_imports()

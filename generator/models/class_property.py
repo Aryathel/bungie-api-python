@@ -18,6 +18,7 @@ class ClassProperty:
     enum_key: bool = field(default=False)
     forward_ref: bool = field(default=False)
     comment: Optional[str] = field(default=None)
+    byte_enum: bool = field(default=False)
 
     def __post_init__(self) -> None:
         if self.dict and not self.key_type:
@@ -60,22 +61,27 @@ class ClassProperty:
 
     @property
     def forward_ref_mm_field(self) -> str:
+        arg = 'mm_field='
+
+        if self.dict:
+            arg += f'{PropertyType.object.mm_type}(keys={PropertyType(self.key_type).mm_type if not self.enum_key else "fields.Enum(" + self.key_type+ ", by_value=" + str(not self.byte_enum) + ")"}, values='
+        if self.list:
+            arg += PropertyType.array.mm_type + '('
+
+        print(self.name, self.type, self.enum, self.forward_ref, self.byte_enum)
         if self.forward_ref:
-            arg = 'mm_field='
-
-            if self.dict:
-                arg += f'{PropertyType.object.mm_type}(keys={PropertyType(self.key_type).mm_type if not self.enum_key else "fields.Enum(" + self.key_type+ ")"}, values='
-            if self.list:
-                arg += PropertyType.array.mm_type + '('
-
             arg += f'fields.Nested(lambda: {self.type}.schema())'
+        elif self.enum and self.byte_enum:
+            arg += f'fields.Enum({self.type}, by_value=False)'
+        else:
+            arg += PropertyType.from_python_type(self.type).mm_type
 
-            if self.list:
-                arg += ')'
-            if self.dict:
-                arg += ')'
+        if self.list:
+            arg += ')'
+        if self.dict:
+            arg += ')'
 
-            return arg
+        return arg
 
     @property
     def field_value(self) -> str:
@@ -90,6 +96,8 @@ class ClassProperty:
         if self.byte:
             args.append('metadata=config(mm_field=UnionField(fields=[fields.Integer, fields.String]))')
         if self.forward_ref:
+            args.append(f'metadata=config({self.forward_ref_mm_field})')
+        elif self.byte_enum:
             args.append(f'metadata=config({self.forward_ref_mm_field})')
 
         if args:

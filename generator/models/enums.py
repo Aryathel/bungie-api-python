@@ -34,6 +34,21 @@ class PropertyType(Enum):
         else:
             raise ValueError('PropertyType is None.')
 
+    @staticmethod
+    def from_python_type(t: str) -> 'PropertyType':
+        if t == 'list':
+            return PropertyType.array
+        elif t == 'str':
+            return PropertyType.string
+        elif t == 'int':
+            return PropertyType.integer
+        elif t == 'bool':
+            return PropertyType.boolean
+        elif t == 'dict':
+            return PropertyType.object
+        else:
+            raise ValueError(f'Unrecognized type: {t}')
+
     @property
     def mm_type(self) -> str:
         if self == PropertyType.array:

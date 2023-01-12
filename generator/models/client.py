@@ -273,7 +273,7 @@ class Client:
                 1
             ))
         items.append('')
-        items.append(StringUtils.indent_str('_access_token = None', 1))
+        items.append(StringUtils.indent_str('self._access_token = None', 1))
         return items
 
     @property
