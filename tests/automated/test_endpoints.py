@@ -1,6 +1,6 @@
 import unittest
 
-from ..core import TestCore
+from tests.core import TestCore
 
 
 class TestApp(unittest.IsolatedAsyncioTestCase, TestCore):
