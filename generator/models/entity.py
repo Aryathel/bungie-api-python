@@ -761,11 +761,15 @@ class ResponseEntity(Entity):
 class EntityCollection:
     entities: list[Entity | ResponseEntity]
     imports: EntityImportCollection
-    entities_with_extra = ['Queries.PagedQuery']
+    entities_with_extra = [
+        'Queries.PagedQuery',
+        'Forum.PostResponse',
+    ]
 
     def __init__(self):
         self.entities = []
         self.imports = EntityImportCollection()
+        self.exception_enum_entity = None
 
     @property
     def placeholder_names(self) -> list[str]:

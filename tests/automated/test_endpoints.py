@@ -1,5 +1,7 @@
 import unittest
 
+from generated.entities import ForumTopicsQuickDateEnum, ForumTopicsSortEnum, ForumTopicsCategoryFiltersEnum, \
+    ForumPostSortEnum
 from tests.core import TestCore
 
 
@@ -9,24 +11,35 @@ class TestApp(unittest.IsolatedAsyncioTestCase, TestCore):
     - [ ] App.GetApplicationApiUsage: Requires OAuth
     - [x] App.GetApplicationApiUsage
     """
+    tests = ['test_get_bungie_applications']
+
     async def test_get_bungie_applications(self) -> None:
         sync_r = self.sync_client.app.get_bungie_applications()
         async_r = await self.async_client.app.get_bungie_applications()
         assert sync_r == async_r
+        print('GetBungieApplications:', sync_r)
 
 
 class TestUser(unittest.IsolatedAsyncioTestCase, TestCore):
     """
     Coverage:
-    - [x] User.GetBungieNetUserById:
-    - [x] User.GetSanitizedPlatformDisplayNames:
+    - [x] User.GetBungieNetUserById
+    - [x] User.GetSanitizedPlatformDisplayNames
     - [ ] User.GetCredentialTypesForTargetAccount: Requires OAuth
-    - [x] User.GetAvailableThemes:
-    - [x] User.GetMembershipDataById:
+    - [x] User.GetAvailableThemes
+    - [x] User.GetMembershipDataById
     - [ ] User.GetMembershipDataForCurrentUser: Requires OAuth
-    - [x] User.GetMembershipFromHardLinkedCredential:
-    - [x] User.SearchByGlobalNamePrefix:
+    - [x] User.GetMembershipFromHardLinkedCredential
+    - [x] User.SearchByGlobalNamePrefix
     """
+    tests = [
+        'test_get_bungie_net_user_by_id',
+        'test_get_sanitized_platform_display_names',
+        'test_get_available_themes',
+        'test_get_membership_data_by_id',
+        'test_get_membership_from_hard_linked_credential',
+        'test_search_by_global_name_post',
+    ]
 
     async def test_get_bungie_net_user_by_id(self) -> None:
         print(self.sync_client.authorization_url)
@@ -103,6 +116,16 @@ class TestContent(unittest.IsolatedAsyncioTestCase, TestCore):
     - [x] Content.SearchHelpArticles
     - [x] Content.RssNewsArticles
     """
+    tests = [
+        'test_get_content_type',
+        'test_get_content_by_id',
+        'test_get_content_by_tag_and_type',
+        'test_search_content_with_text',
+        'test_search_content_by_tag_and_type',
+        'test_search_help_articles',
+        'test_rss_news_articles',
+    ]
+
     async def test_get_content_type(self) -> None:
         c_type = 'news'
         sync_r = self.sync_client.content.get_content_type(c_type)
@@ -175,5 +198,220 @@ class TestContent(unittest.IsolatedAsyncioTestCase, TestCore):
         print('RssNewsArticles:', sync_r)
 
 
+class TestForum(unittest.IsolatedAsyncioTestCase, TestCore):
+    """
+    Coverage:
+    - [x] Forum.GetTopicsPaged
+    - [x] Forum.GetCoreTopicsPaged
+    - [x] Forum.GetPostsThreadedPaged
+    - [x] Forum.GetPostsThreadedPagedFromChild
+    - [x] Forum.GetPostAndParent
+    - [ ] Forum.GetPostAndParentAwaitingApproval: Scratched due to not having a post awaiting approval to test with.
+    - [ ] Forum.GetTopicForContent: Scratched due to not having a content ID to test with.
+    - [x] Forum.GetForumTagSuggestions
+    - [x] Forum.GetPoll
+    - [ ] Forum.GetRecruitmentThreadSummaries: Scratched due to persistent "down for maintenance" error.
+    """
+    tests = [
+        'test_get_topics_paged',
+        'test_get_core_topics_paged',
+        'test_get_posts_threaded_pages',
+        'test_get_posts_threaded_paged_from_child',
+        'test_get_post_and_parent',
+        # 'test_get_post_and_parent_awaiting_approval',
+        # 'test_get_topic_for_content',
+        'test_get_forum_tag_suggestions',
+        'test_get_poll',
+        # 'test_get_recruitment_thread_summaries',
+    ]
+
+    async def test_get_topics_paged(self) -> None:
+        category_filter = ForumTopicsCategoryFiltersEnum.None_
+        group = 2603136
+        page = 0
+        page_size = 5
+        quick_date = ForumTopicsQuickDateEnum.All
+        sort = ForumTopicsSortEnum.Default
+
+        sync_r = self.sync_client.forum.get_topics_paged(
+            category_filter=category_filter,
+            group=group,
+            page=page,
+            page_size=page_size,
+            quick_date=quick_date,
+            sort=sort,
+            locales='en',
+        )
+        async_r = await self.async_client.forum.get_topics_paged(
+            category_filter=category_filter,
+            group=group,
+            page=page,
+            page_size=page_size,
+            quick_date=quick_date,
+            sort=sort,
+            locales='en',
+        )
+        assert sync_r == async_r
+        print('GetTopicsPaged:', sync_r)
+
+    async def test_get_core_topics_paged(self) -> None:
+        page = 0
+        sync_r = self.sync_client.forum.get_core_topics_paged(
+            category_filter=ForumTopicsCategoryFiltersEnum.TextOnly,
+            page=page,
+            quick_date=ForumTopicsQuickDateEnum.All,
+            sort=ForumTopicsSortEnum.MostUpvoted,
+            locales='en'
+        )
+        async_r = await self.async_client.forum.get_core_topics_paged(
+            category_filter=ForumTopicsCategoryFiltersEnum.TextOnly,
+            page=page,
+            quick_date=ForumTopicsQuickDateEnum.All,
+            sort=ForumTopicsSortEnum.MostUpvoted,
+            locales='en'
+        )
+        # Check for just the most upvoted responses matching,
+        # because the forums change too quickly to verify the entire response matching.
+        assert sync_r.Response.results[0] == async_r.Response.results[0]
+        print('GetCoreTopicsPaged:', sync_r)
+
+    async def test_get_posts_threaded_pages(self) -> None:
+        get_parent_post = True
+        page = 0
+        page_size = 5
+        parent_post_id = 262235949
+        reply_size = 100
+        root_thread_mode = True
+        sort_mode = ForumPostSortEnum.Default
+
+        sync_r = self.sync_client.forum.get_posts_threaded_paged(
+            get_parent_post=get_parent_post,
+            page=page,
+            page_size=page_size,
+            parent_post_id=parent_post_id,
+            reply_size=reply_size,
+            root_thread_mode=root_thread_mode,
+            sort_mode=sort_mode,
+        )
+        async_r = await self.async_client.forum.get_posts_threaded_paged(
+            get_parent_post=get_parent_post,
+            page=page,
+            page_size=page_size,
+            parent_post_id=parent_post_id,
+            reply_size=reply_size,
+            root_thread_mode=root_thread_mode,
+            sort_mode=sort_mode,
+        )
+        assert sync_r == async_r
+        print('GetPostsThreadedPaged:', sync_r)
+
+    async def test_get_posts_threaded_paged_from_child(self) -> None:
+        child_post_id = 262235995
+        page = 0
+        page_size = 100
+        reply_size = 100
+        root_thread_mode = False
+        sort_mode = ForumPostSortEnum.Default
+        showbanned = '1'
+
+        sync_r = self.sync_client.forum.get_posts_threaded_paged_from_child(
+            child_post_id=child_post_id,
+            page=page,
+            page_size=page_size,
+            reply_size=reply_size,
+            root_thread_mode=root_thread_mode,
+            sort_mode=sort_mode,
+            showbanned=showbanned,
+        )
+        async_r = await self.async_client.forum.get_posts_threaded_paged_from_child(
+            child_post_id=child_post_id,
+            page=page,
+            page_size=page_size,
+            reply_size=reply_size,
+            root_thread_mode=root_thread_mode,
+            sort_mode=sort_mode,
+            showbanned=showbanned,
+        )
+
+        assert async_r == sync_r
+        print('GetPostsThreadedPagedFromChild:', sync_r)
+
+    async def test_get_post_and_parent(self) -> None:
+        child_post_id = 262235995
+        showbanned = '1'
+
+        sync_r = self.sync_client.forum.get_post_and_parent(
+            child_post_id=child_post_id,
+            showbanned=showbanned,
+        )
+        async_r = await self.async_client.forum.get_post_and_parent(
+            child_post_id=child_post_id,
+            showbanned=showbanned,
+        )
+        assert sync_r == async_r
+        print('GetPostAndParent:', sync_r)
+
+    """
+    async def test_get_post_and_parent_awaiting_approval(self) -> None:
+        child_post_id = 262235995
+        showbanned = '1'
+
+        sync_r = self.sync_client.forum.get_post_and_parent_awaiting_approval(
+            child_post_id=child_post_id,
+            showbanned=showbanned,
+        )
+        async_r = await self.async_client.forum.get_post_and_parent_awaiting_approval(
+            child_post_id=child_post_id,
+            showbanned=showbanned,
+        )
+        assert sync_r == async_r
+        print('GetPostAndParentAwaitingApproval:', sync_r)
+    """
+
+    """
+    async def test_get_topic_for_content(self) -> None:
+        content_id = 123
+
+        sync_r = self.sync_client.forum.get_topic_for_content(content_id)
+        async_r = await self.async_client.forum.get_topic_for_content(content_id)
+        assert sync_r == async_r
+        print('GetTopicForContent:', sync_r)
+    """
+
+    async def test_get_forum_tag_suggestions(self) -> None:
+        partial_tag = '#destiny'
+        sync_r = self.sync_client.forum.get_forum_tag_suggestions(partial_tag)
+        async_r = await self.async_client.forum.get_forum_tag_suggestions(partial_tag)
+        assert sync_r == async_r
+        print('GetForumTagSuggestions:', sync_r)
+
+    async def test_get_poll(self) -> None:
+        topic_id = 262238856
+        sync_r = self.sync_client.forum.get_poll(topic_id)
+        async_r = await self.async_client.forum.get_poll(topic_id)
+        assert sync_r == async_r
+        print('GetPoll:', sync_r)
+
+    """
+    async def test_get_recruitment_thread_summaries(self) -> None:
+        ids = [262240321]
+        sync_r = self.sync_client.forum.get_recruitment_thread_summaries(ids)
+        async_r = await self.async_client.forum.get_recruitment_thread_summaries(ids)
+        assert sync_r == async_r
+        print('GetRecruitmentThreadSummaries:', sync_r)
+    """
+
+
 if __name__ == "__main__":
-    unittest.main()
+    tests = {
+        'APP': TestApp.suite(),
+        'USER': TestUser.suite(),
+        'CONTENT': TestContent.suite(),
+        'FORUM': TestForum.suite(),
+    }
+
+    for name, test in tests.items():
+        print(f' {name} TESTS '.center(100, '='))
+        unittest.TextTestRunner().run(test)
+
+    # unittest.main()

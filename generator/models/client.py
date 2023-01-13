@@ -8,6 +8,8 @@ from ..utils.str_utils import StringUtils
 
 class Client:
     utils_path_name = 'utils'
+    entities_path_name = 'entities'
+    exceptions_name = 'exceptions'
     oauth_util_name = 'oauth_utils'
     endpoints_path_name = 'endpoints'
     sync_client_name = 'BungieClientSync'
@@ -47,6 +49,16 @@ class Client:
                     'OAuthContextNotFound',
                     'OAuthInitFailure',
                 ]
+            ),
+            EntityImport(
+                name=f'{self.utils_path_name}.{self.exceptions_name}',
+                type=ImportType.relative,
+                imports=['BungieApiError'],
+            ),
+            EntityImport(
+                name=self.entities_path_name,
+                type=ImportType.relative,
+                imports=['PlatformErrorCodes'],
             ),
             EntityImport(name='datetime', type=ImportType.stdlib, imports=['datetime']),
         ])
@@ -122,16 +134,28 @@ class Client:
                 'async with self.session(requires_oauth=requires_oauth) as session:',
                 1
             ))
-            items.append(StringUtils.indent_str('async with session.get(', 2))
-            items.append(StringUtils.indent_str('url,', 3))
-            items.append(StringUtils.indent_str('headers=headers,', 3))
-            items.append(StringUtils.indent_str('params=params,', 3))
-            items.append(StringUtils.indent_str('auth=auth,', 3))
-            items.append(StringUtils.indent_str('data=data,', 3))
-            items.append(StringUtils.indent_str('json=json,', 3))
-            items.append(StringUtils.indent_str(') as r:', 2))
-            items.append(StringUtils.indent_str('return await r.text()', 3))
+            items.append(StringUtils.indent_str('try:', 2))
+            items.append(StringUtils.indent_str('async with session.get(', 3))
+            items.append(StringUtils.indent_str('url,', 4))
+            items.append(StringUtils.indent_str('headers=headers,', 4))
+            items.append(StringUtils.indent_str('params=params,', 4))
+            items.append(StringUtils.indent_str('auth=auth,', 4))
+            items.append(StringUtils.indent_str('data=data,', 4))
+            items.append(StringUtils.indent_str('json=json,', 4))
+            items.append(StringUtils.indent_str(') as r:', 3))
+            items.append(StringUtils.indent_str('return await r.text()', 4))
+            items.append(StringUtils.indent_str('except ClientResponseError as e:', 2))
+            items.append(StringUtils.indent_str('try:', 3))
+            items.append(StringUtils.indent_str('raw = await r.json()', 4))
+            items.append(StringUtils.indent_str(
+                'raise BungieApiError(\'get\', url, r.status, '
+                'PlatformErrorCodes(raw[\'ErrorCode\']), raw[\'Message\'])',
+                4
+            ))
+            items.append(StringUtils.indent_str('except Exception:', 3))
+            items.append(StringUtils.indent_str('raise e', 4))
         else:
+            import requests
             items.append('def _get(')
             items.append(StringUtils.indent_str('self,', 2))
             items.append(StringUtils.indent_str('url: str,', 2))
@@ -154,8 +178,19 @@ class Client:
             items.append(StringUtils.indent_str('data=data,', 3))
             items.append(StringUtils.indent_str('json=json,', 3))
             items.append(StringUtils.indent_str(')', 2))
-            items.append(StringUtils.indent_str('r.raise_for_status()', 2))
-            items.append(StringUtils.indent_str('return r.text', 2))
+            items.append(StringUtils.indent_str('try:', 2))
+            items.append(StringUtils.indent_str('r.raise_for_status()', 3))
+            items.append(StringUtils.indent_str('return r.text', 3))
+            items.append(StringUtils.indent_str('except HTTPError as e:', 2))
+            items.append(StringUtils.indent_str('try:', 3))
+            items.append(StringUtils.indent_str('raw = r.json()', 4))
+            items.append(StringUtils.indent_str(
+                'raise BungieApiError(\'get\', url, r.status_code, '
+                'PlatformErrorCodes(raw[\'ErrorCode\']), raw[\'Message\'])',
+                4
+            ))
+            items.append(StringUtils.indent_str('except Exception:', 3))
+            items.append(StringUtils.indent_str('raise e', 4))
         return items
 
     @property
@@ -176,15 +211,26 @@ class Client:
                 'async with self.session(requires_oauth=requires_oauth) as session:',
                 1
             ))
-            items.append(StringUtils.indent_str('async with session.post(', 2))
-            items.append(StringUtils.indent_str('url,', 3))
-            items.append(StringUtils.indent_str('headers=headers,', 3))
-            items.append(StringUtils.indent_str('params=params,', 3))
-            items.append(StringUtils.indent_str('auth=auth,', 3))
-            items.append(StringUtils.indent_str('data=data,', 3))
-            items.append(StringUtils.indent_str('json=json,', 3))
-            items.append(StringUtils.indent_str(') as r:', 2))
-            items.append(StringUtils.indent_str('return await r.text()', 3))
+            items.append(StringUtils.indent_str('try:', 2))
+            items.append(StringUtils.indent_str('async with session.post(', 3))
+            items.append(StringUtils.indent_str('url,', 4))
+            items.append(StringUtils.indent_str('headers=headers,', 4))
+            items.append(StringUtils.indent_str('params=params,', 4))
+            items.append(StringUtils.indent_str('auth=auth,', 4))
+            items.append(StringUtils.indent_str('data=data,', 4))
+            items.append(StringUtils.indent_str('json=json,', 4))
+            items.append(StringUtils.indent_str(') as r:', 3))
+            items.append(StringUtils.indent_str('return await r.text()', 4))
+            items.append(StringUtils.indent_str('except ClientResponseError as e:', 2))
+            items.append(StringUtils.indent_str('try:', 3))
+            items.append(StringUtils.indent_str('raw = await r.json()', 4))
+            items.append(StringUtils.indent_str(
+                'raise BungieApiError(\'post\', url, r.status, '
+                'PlatformErrorCodes(raw[\'ErrorCode\']), raw[\'Message\'])',
+                4
+            ))
+            items.append(StringUtils.indent_str('except Exception:', 3))
+            items.append(StringUtils.indent_str('raise e', 4))
         else:
             items.append('def _post(')
             items.append(StringUtils.indent_str('self,', 2))
@@ -208,8 +254,19 @@ class Client:
             items.append(StringUtils.indent_str('data=data,', 3))
             items.append(StringUtils.indent_str('json=json,', 3))
             items.append(StringUtils.indent_str(')', 2))
-            items.append(StringUtils.indent_str('r.raise_for_status()', 2))
-            items.append(StringUtils.indent_str('return r.text', 2))
+            items.append(StringUtils.indent_str('try:', 2))
+            items.append(StringUtils.indent_str('r.raise_for_status()', 3))
+            items.append(StringUtils.indent_str('return r.text', 3))
+            items.append(StringUtils.indent_str('except HTTPError as e:', 2))
+            items.append(StringUtils.indent_str('try:', 3))
+            items.append(StringUtils.indent_str('raw = r.json()', 4))
+            items.append(StringUtils.indent_str(
+                'raise BungieApiError(\'post\', url, r.status_code, '
+                'PlatformErrorCodes(raw[\'ErrorCode\']), raw[\'Message\'])',
+                4
+            ))
+            items.append(StringUtils.indent_str('except Exception:', 3))
+            items.append(StringUtils.indent_str('raise e', 4))
         return items
 
     @property

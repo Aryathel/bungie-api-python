@@ -32,6 +32,7 @@ class APIGenerator:
     byte_utils_file = 'byte_utils'
     union_field_file = 'union_field'
     oauth_util_file = 'oauth_utils'
+    exceptions_file = 'exceptions'
     entity_model_file = 'models'
     enum_model_file = 'enums'
     responses_model_file = 'responses'
@@ -325,7 +326,7 @@ class APIGenerator:
             bar()
 
     def gen_utils(self) -> None:
-        util_count = 2
+        util_count = 3
         with alive_bar(util_count, title='UTIL FILES', force_tty=True, title_length=12) as bar:
 
             # Ensure path and default files exist.
@@ -551,6 +552,38 @@ class APIGenerator:
                 content += StringUtils.indent_str('return datetime.utcnow() >= self.refresh_expires_at\n', 3)
                 content += StringUtils.indent_str('else:\n', 2)
                 content += StringUtils.indent_str('return True\n', 3)
+
+                f.write(content)
+            bar()
+
+            with open(
+                os.path.join(self.generated_path, self.utils_path_name, self.exceptions_file + self.file_extension),
+                'w+'
+            ) as f:
+                imports = EntityImportCollection([EntityImport(
+                    name=f'.{self.entities_path_name}',
+                    type=ImportType.relative,
+                    imports=['PlatformErrorCodes'],
+                )])
+                content = imports.formatted_imports
+                content += '\n'
+
+                content += StringUtils.gen_class_declaration('BungieApiError', ['BaseException'])
+                content += '\n'
+                content += StringUtils.gen_function_declaration('__init__', [
+                    'self',
+                    'method: str',
+                    'url: str',
+                    'status_code: int',
+                    'error_code: PlatformErrorCodes',
+                    'message: str',
+                ], depth=1)
+                content += '\n'
+                content += StringUtils.indent_str(
+                    'super().__init__(f\'[{method.upper()} {status_code} {url}]\\n'
+                    '\\t{error_code.value} {error_code.name} - {message}\')\n',
+                    2
+                )
 
                 f.write(content)
             bar()

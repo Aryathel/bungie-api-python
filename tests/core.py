@@ -1,11 +1,14 @@
 import os
+import unittest
+from typing import Type
 
 from generated import BungieClientSync, BungieClientAsync
 
 
-class TestCore:
+class TestCore(unittest.TestCase):
     _sync_client: BungieClientSync = None
     _async_client: BungieClientAsync = None
+    tests: list[str]
 
     @property
     def sync_client(self) -> BungieClientSync:
@@ -26,3 +29,10 @@ class TestCore:
                 os.getenv('BUNGIE_CLIENT_SECRET'),
             )
         return self._async_client
+
+    @classmethod
+    def suite(cls) -> unittest.TestSuite:
+        suite = unittest.TestSuite()
+        for test in cls.tests:
+            suite.addTest(cls(test))
+        return suite
