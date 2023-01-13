@@ -13,11 +13,7 @@ def dict_union_dataclass_decoder(key_type: Type, *types: Type):
             last_err = None
             for type in types:
                 try:
-                    if k == 'Destiny.Definitions.Seasons.DestinyEventCardDefinition':
-                        print(k, type, v)
                     obj[k] = type.schema().load(v)
-                    if k == 'Destiny.Definitions.Seasons.DestinyEventCardDefinition':
-                        print(obj[k])
                 except ValidationError as e:
                     last_err = e
             if k not in obj:

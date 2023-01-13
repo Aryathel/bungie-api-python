@@ -66,14 +66,14 @@ class EndpointParam:
     @property
     def type(self) -> str:
         if self._type:
-            if not self.required and not self.from_body:
+            if not self.required:  # and not self.from_body:
                 return f'Optional[{self._type}]'
             else:
                 return self._type
 
     @property
     def default_str(self) -> str:
-        if not self.required and not self.from_body:
+        if not self.required:  # and not self.from_body:
             return f' = {self.default}'
         else:
             if self.default:
@@ -311,7 +311,10 @@ class Endpoint:
             content += StringUtils.indent_str('headers={\'Content-Type\': \'application/json\'},\n', 3)
 
             if self.request_body_entity:
-                content += StringUtils.indent_str('json=_entity.to_dict(),\n', 3)
+                content += StringUtils.indent_str(
+                    f'json={self.request_body_entity if isinstance(self.request_body_entity, str) else self.request_body_entity.name_safe}.schema().dump(_entity),\n',
+                    3
+                )
             elif self.array_body_type:
                 content += StringUtils.indent_str('json=values,\n', 3)
         if self.requires_oauth:
@@ -496,7 +499,7 @@ class Endpoint:
                 ))
             self.parameters['body'].append(EndpointParam(
                 name=prop.name,
-                # required=not prop.optional,
+                required=not prop.optional,
                 type=prop.field_type_required,
                 from_body=True,
             ))

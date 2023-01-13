@@ -129,7 +129,8 @@ class Client:
             items.append(StringUtils.indent_str('json: Optional[dict[str, Any] | list[Any]] = None,', 2))
             items.append(StringUtils.indent_str('requires_oauth: bool = False,', 2))
             items.append(StringUtils.indent_str('auth: BasicAuth = None,', 2))
-            items.append(') -> str:')
+            items.append(StringUtils.indent_str('raw_content: bool = False', 2))
+            items.append(') -> str | bytes:')
             items.append(StringUtils.indent_str(
                 'async with self.session(requires_oauth=requires_oauth) as session:',
                 1
@@ -143,7 +144,7 @@ class Client:
             items.append(StringUtils.indent_str('data=data,', 4))
             items.append(StringUtils.indent_str('json=json,', 4))
             items.append(StringUtils.indent_str(') as r:', 3))
-            items.append(StringUtils.indent_str('return await r.text()', 4))
+            items.append(StringUtils.indent_str('return await r.text() if not raw_content else await r.read()', 4))
             items.append(StringUtils.indent_str('except ClientResponseError as e:', 2))
             items.append(StringUtils.indent_str('try:', 3))
             items.append(StringUtils.indent_str('raw = await r.json()', 4))
@@ -165,7 +166,8 @@ class Client:
             items.append(StringUtils.indent_str('json: Optional[dict[str, Any] | list[Any]] = None,', 2))
             items.append(StringUtils.indent_str('requires_oauth: bool = False,', 2))
             items.append(StringUtils.indent_str('auth: HTTPBasicAuth = None,', 2))
-            items.append(') -> str:')
+            items.append(StringUtils.indent_str('raw_content: bool = False', 2))
+            items.append(') -> str | bytes:')
             items.append(StringUtils.indent_str(
                 'with self.session(requires_oauth=requires_oauth) as session:',
                 1
@@ -180,7 +182,7 @@ class Client:
             items.append(StringUtils.indent_str(')', 2))
             items.append(StringUtils.indent_str('try:', 2))
             items.append(StringUtils.indent_str('r.raise_for_status()', 3))
-            items.append(StringUtils.indent_str('return r.text', 3))
+            items.append(StringUtils.indent_str('return r.text if not raw_content else r.content', 3))
             items.append(StringUtils.indent_str('except HTTPError as e:', 2))
             items.append(StringUtils.indent_str('try:', 3))
             items.append(StringUtils.indent_str('raw = r.json()', 4))
@@ -206,7 +208,8 @@ class Client:
             items.append(StringUtils.indent_str('json: Optional[dict[str, Any] | list[Any]] = None,', 2))
             items.append(StringUtils.indent_str('requires_oauth: bool = False,', 2))
             items.append(StringUtils.indent_str('auth: BasicAuth = None,', 2))
-            items.append(') -> str:')
+            items.append(StringUtils.indent_str('raw_content: bool = False', 2))
+            items.append(') -> str | bytes:')
             items.append(StringUtils.indent_str(
                 'async with self.session(requires_oauth=requires_oauth) as session:',
                 1
@@ -220,7 +223,7 @@ class Client:
             items.append(StringUtils.indent_str('data=data,', 4))
             items.append(StringUtils.indent_str('json=json,', 4))
             items.append(StringUtils.indent_str(') as r:', 3))
-            items.append(StringUtils.indent_str('return await r.text()', 4))
+            items.append(StringUtils.indent_str('return await r.text() if not raw_content else await r.read()', 4))
             items.append(StringUtils.indent_str('except ClientResponseError as e:', 2))
             items.append(StringUtils.indent_str('try:', 3))
             items.append(StringUtils.indent_str('raw = await r.json()', 4))
@@ -241,7 +244,8 @@ class Client:
             items.append(StringUtils.indent_str('json: Optional[dict[str, Any] | list[Any]] = None,', 2))
             items.append(StringUtils.indent_str('requires_oauth: bool = False,', 2))
             items.append(StringUtils.indent_str('auth: HTTPBasicAuth = None,', 2))
-            items.append(') -> str:')
+            items.append(StringUtils.indent_str('raw_content: bool = False', 2))
+            items.append(') -> str | bytes:')
             items.append(StringUtils.indent_str(
                 'with self.session(requires_oauth=requires_oauth) as session:',
                 1
@@ -256,7 +260,7 @@ class Client:
             items.append(StringUtils.indent_str(')', 2))
             items.append(StringUtils.indent_str('try:', 2))
             items.append(StringUtils.indent_str('r.raise_for_status()', 3))
-            items.append(StringUtils.indent_str('return r.text', 3))
+            items.append(StringUtils.indent_str('return r.text if not raw_content else r.content', 3))
             items.append(StringUtils.indent_str('except HTTPError as e:', 2))
             items.append(StringUtils.indent_str('try:', 3))
             items.append(StringUtils.indent_str('raw = r.json()', 4))
@@ -304,6 +308,31 @@ class Client:
                 StringUtils.indent_str('})', 3), '',
                 StringUtils.indent_str('yield session', 2)
             ]
+
+    @property
+    def get_image_method(self) -> list[str]:
+        items = [
+            StringUtils.gen_function_declaration(
+                'get_image',
+                [
+                    'self',
+                    'path: str',
+                ],
+                'bytes',
+                is_async=self.is_async,
+            ),
+        ]
+        if self.is_async:
+            items.append(StringUtils.indent_str(
+                'return await self._get(f\'https://www.bungie.net{path}\', raw_content=True)',
+                1
+            ))
+        else:
+            items.append(StringUtils.indent_str(
+                'return self._get(f\'https://www.bungie.net{path}\', raw_content=True)',
+                1
+            ))
+        return items
 
     @property
     def init_method(self) -> list[str]:
@@ -503,6 +532,8 @@ class Client:
         content += '\n'.join(StringUtils.indent_str(s, 1) for s in self.get_method)
         content += '\n\n'
         content += '\n'.join(StringUtils.indent_str(s, 1) for s in self.post_method)
+        content += '\n\n'
+        content += '\n'.join(StringUtils.indent_str(s, 1) for s in self.get_image_method)
         content += '\n'
         return content
 

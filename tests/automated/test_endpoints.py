@@ -1,7 +1,7 @@
 import unittest
 
 from generated.entities import ForumTopicsQuickDateEnum, ForumTopicsSortEnum, ForumTopicsCategoryFiltersEnum, \
-    ForumPostSortEnum
+    ForumPostSortEnum, GroupType
 from tests.core import TestCore
 
 
@@ -402,12 +402,85 @@ class TestForum(unittest.IsolatedAsyncioTestCase, TestCore):
     """
 
 
+class TestGroupV2(unittest.IsolatedAsyncioTestCase, TestCore):
+    """
+    Coverage:
+    - [x] GroupV2.GetAvailableAvatars
+    - [x] GroupV2.GetAvailableThemes
+    - [ ] GroupV2.GetUserClanInviteSetting: Requires OAuth
+    - [ ] GroupV2.GetRecommendedGroups: Requires OAuth
+    - [x] GroupV2.GroupSearch
+    - [ ] GroupV2.GetGroup
+    - [ ] GroupV2.GetGroupByName
+    - [ ] GroupV2.GetGroupByNameV2
+    - [ ] GroupV2.GetGroupOptionalConversations
+    - [ ] GroupV2.EditGroup
+    - [ ] GroupV2.EditClanBanner
+    - [ ] GroupV2.EditFounderOptions
+    - [ ] GroupV2.AddOptionalConversation
+    - [ ] GroupV2.EditOptionalConversation
+    - [ ] GroupV2.GetMembersOfGroup
+    - [ ] GroupV2.GetAdminsAndFounderOfGroup
+    - [ ] GroupV2.EditGroupMembership
+    - [ ] GroupV2.KickMember
+    - [ ] GroupV2.BanMember
+    - [ ] GroupV2.UnbanMember
+    - [ ] GroupV2.GetBannedMembersOfGroup
+    - [ ] GroupV2.AbdicateFoundership
+    - [ ] GroupV2.GetPendingMemberships
+    - [ ] GroupV2.GetInvitedIndividuals
+    - [ ] GroupV2.ApproveAllPending
+    - [ ] GroupV2.DenyAllPending
+    - [ ] GroupV2.ApprovePendingForList
+    - [ ] GroupV2.ApprovePending
+    - [ ] GroupV2.DenyPendingForList
+    - [ ] GroupV2.GetGroupsForMember
+    - [ ] GroupV2.RecoverGroupForFounder
+    - [ ] GroupV2.GetPotentialGroupsForMember
+    - [ ] GroupV2.IndividualGroupInvite
+    - [ ] GroupV2.IndividualGroupInviteCancel
+    """
+    tests = [
+        'test_get_available_avatars',
+        'test_get_available_themes',
+        'test_group_search',
+    ]
+
+    async def test_get_available_avatars(self) -> None:
+        sync_r = self.sync_client.group_v2.get_available_avatars()
+        async_r = await self.async_client.group_v2.get_available_avatars()
+        assert sync_r == async_r
+        print('GetAvailableAvatars:', sync_r)
+
+    async def test_get_available_themes(self) -> None:
+        sync_r = self.sync_client.group_v2.get_available_themes()
+        async_r = await self.async_client.group_v2.get_available_themes()
+        assert sync_r == async_r
+        print('GetAvailableThemes:', sync_r)
+
+    async def test_group_search(self) -> None:
+        name = 'Slicing Squall'
+        gt = GroupType.Clan
+
+        sync_r = self.sync_client.group_v2.group_search(
+            name=name,
+            group_type=gt,
+        )
+        async_r = await self.async_client.group_v2.group_search(
+            name=name,
+            group_type=gt,
+        )
+        assert sync_r == async_r
+        print('GroupSearch:', sync_r)
+
+
 if __name__ == "__main__":
     tests = {
         'APP': TestApp.suite(),
         'USER': TestUser.suite(),
         'CONTENT': TestContent.suite(),
         'FORUM': TestForum.suite(),
+        'GROUPV2': TestGroupV2.suite(),
     }
 
     for name, test in tests.items():

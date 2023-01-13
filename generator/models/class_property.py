@@ -68,7 +68,6 @@ class ClassProperty:
         if self.list:
             arg += PropertyType.array.mm_type + '('
 
-        print(self.name, self.type, self.enum, self.forward_ref, self.byte_enum)
         if self.forward_ref:
             arg += f'fields.Nested(lambda: {self.type}.schema())'
         elif self.enum and self.byte_enum:
