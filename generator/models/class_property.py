@@ -26,7 +26,10 @@ class ClassProperty:
 
     @property
     def ref_type(self) -> str:
-        return f'\'{self.type}\'' if self.forward_ref else self.type
+        t = f'\'{self.type}\'' if self.forward_ref else self.type
+        if self.dict and self.forward_ref:
+            t = f'Optional[{t}]'
+        return t
 
     @property
     def field_type(self) -> str:
@@ -69,7 +72,7 @@ class ClassProperty:
             arg += PropertyType.array.mm_type + '('
 
         if self.forward_ref:
-            arg += f'fields.Nested(lambda: {self.type}.schema())'
+            arg += f'fields.Nested(lambda: {self.type}.schema(), allow_none=True)'
         elif self.enum and self.byte_enum:
             arg += f'fields.Enum({self.type}, by_value=False)'
         else:
@@ -93,7 +96,7 @@ class ClassProperty:
         if self.type == 'datetime':
             args.append('metadata=config(mm_field=fields.DateTime(format=\'iso\'))')
         if self.byte:
-            args.append('metadata=config(mm_field=UnionField(fields=[fields.Integer, fields.String]))')
+            args.append('metadata=config(mm_field=UnionField(fields=[fields.Integer(), fields.String()]))')
         if self.forward_ref:
             args.append(f'metadata=config({self.forward_ref_mm_field})')
         elif self.byte_enum:

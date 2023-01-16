@@ -64,6 +64,10 @@ class Entity:
         self.generate_properties()
 
     @property
+    def is_manifest_definition(self) -> bool:
+        return bool(self.schema.x_mobile_manifest_name)
+
+    @property
     def name(self) -> str:
         return self.qualified_name.split('.')[-1]
 
@@ -764,6 +768,18 @@ class EntityCollection:
     entities_with_extra = [
         'Queries.PagedQuery',
         'Forum.PostResponse',
+
+        'Destiny.Definitions.DestinyInventoryItemDefinition',
+        'Destiny.Definitions.DestinyItemActionBlockDefinition',
+        'Destiny.Definitions.DestinyItemInventoryBlockDefinition',
+        'Destiny.Definitions.DestinyEquippingBlockDefinition',
+        'Destiny.Definitions.DestinyItemSocketBlockDefinition',
+        'Destiny.Definitions.DestinyItemSocketEntryDefinition',
+
+        'Destiny.Definitions.Collectibles.DestinyCollectibleDefinition',
+        'Destiny.Definitions.Collectibles.DestinyCollectibleAcquisitionBlock',
+
+        'Destiny.Entities.Items.DestinyItemComponent',
     ]
 
     def __init__(self):
@@ -802,6 +818,10 @@ class EntityCollection:
     @property
     def init_imports(self) -> list[str]:
         return [e.init_import for e in self.entities]
+
+    @property
+    def manifest_entities(self) -> list[Entity]:
+        return [e for e in self.entities if e.is_manifest_definition]
 
     def _update_placeholder_imports(self) -> None:
         for e in self.entities:

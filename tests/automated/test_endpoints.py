@@ -1,7 +1,7 @@
 import unittest
 
 from generated.entities import ForumTopicsQuickDateEnum, ForumTopicsSortEnum, ForumTopicsCategoryFiltersEnum, \
-    ForumPostSortEnum, GroupType
+    ForumPostSortEnum, GroupType, BungieMembershipType, GroupsForMemberFilter, DestinyComponentType
 from tests.core import TestCore
 
 
@@ -410,40 +410,49 @@ class TestGroupV2(unittest.IsolatedAsyncioTestCase, TestCore):
     - [ ] GroupV2.GetUserClanInviteSetting: Requires OAuth
     - [ ] GroupV2.GetRecommendedGroups: Requires OAuth
     - [x] GroupV2.GroupSearch
-    - [ ] GroupV2.GetGroup
-    - [ ] GroupV2.GetGroupByName
-    - [ ] GroupV2.GetGroupByNameV2
-    - [ ] GroupV2.GetGroupOptionalConversations
-    - [ ] GroupV2.EditGroup
-    - [ ] GroupV2.EditClanBanner
-    - [ ] GroupV2.EditFounderOptions
-    - [ ] GroupV2.AddOptionalConversation
-    - [ ] GroupV2.EditOptionalConversation
-    - [ ] GroupV2.GetMembersOfGroup
-    - [ ] GroupV2.GetAdminsAndFounderOfGroup
-    - [ ] GroupV2.EditGroupMembership
-    - [ ] GroupV2.KickMember
-    - [ ] GroupV2.BanMember
-    - [ ] GroupV2.UnbanMember
-    - [ ] GroupV2.GetBannedMembersOfGroup
-    - [ ] GroupV2.AbdicateFoundership
-    - [ ] GroupV2.GetPendingMemberships
-    - [ ] GroupV2.GetInvitedIndividuals
-    - [ ] GroupV2.ApproveAllPending
-    - [ ] GroupV2.DenyAllPending
-    - [ ] GroupV2.ApprovePendingForList
-    - [ ] GroupV2.ApprovePending
-    - [ ] GroupV2.DenyPendingForList
-    - [ ] GroupV2.GetGroupsForMember
-    - [ ] GroupV2.RecoverGroupForFounder
-    - [ ] GroupV2.GetPotentialGroupsForMember
-    - [ ] GroupV2.IndividualGroupInvite
-    - [ ] GroupV2.IndividualGroupInviteCancel
+    - [x] GroupV2.GetGroup
+    - [x] GroupV2.GetGroupByName
+    - [x] GroupV2.GetGroupByNameV2
+    - [x] GroupV2.GetGroupOptionalConversations
+    - [ ] GroupV2.EditGroup: Excluded due to not wanting to edit a clan.
+    - [ ] GroupV2.EditClanBanner: Excluded due to not wanting to edit a clan.
+    - [ ] GroupV2.EditFounderOptions: Excluded due to not wanting to edit a clan.
+    - [ ] GroupV2.AddOptionalConversation: Excluded due to not wanting to edit a clan.
+    - [ ] GroupV2.EditOptionalConversation: Excluded due to not wanting to edit a clan.
+    - [x] GroupV2.GetMembersOfGroup
+    - [x] GroupV2.GetAdminsAndFounderOfGroup
+    - [ ] GroupV2.EditGroupMembership: Excluded due to not wanting to edit any memberships.
+    - [ ] GroupV2.KickMember: Excluded due to not wanting to kick any members.
+    - [ ] GroupV2.BanMember: Excluded due to not wanting to ban any members.
+    - [ ] GroupV2.UnbanMember: Excluded due to not wanting to unban any members.
+    - [ ] GroupV2.GetBannedMembersOfGroup: Excluded due to requiring OAuth.
+    - [ ] GroupV2.AbdicateFoundership: Excluded due to not wanting to abdicate foundership.
+    - [ ] GroupV2.GetPendingMemberships: Excluded due to requiring OAuth.
+    - [ ] GroupV2.GetInvitedIndividuals: Excluded due to requiring OAuth.
+    - [ ] GroupV2.ApproveAllPending: Excluded due to not wanting to approve pending memberships.
+    - [ ] GroupV2.DenyAllPending: Excluded due to not wanting to deny pending memberships.
+    - [ ] GroupV2.ApprovePendingForList: Excluded due to not wanting to approve pending memberships.
+    - [ ] GroupV2.ApprovePending: Excluded due to not wanting to approve pending memberships.
+    - [ ] GroupV2.DenyPendingForList: Excluded due to not wanting to deny pending memberships.
+    - [x] GroupV2.GetGroupsForMember
+    - [ ] GroupV2.RecoverGroupForFounder: Excluded due to OAuth requirement.
+    - [x] GroupV2.GetPotentialGroupsForMember
+    - [ ] GroupV2.IndividualGroupInvite: Excluded due to not wanting to invite members.
+    - [ ] GroupV2.IndividualGroupInviteCancel: Excluded due to not wanting to cancel member invites.
     """
     tests = [
         'test_get_available_avatars',
         'test_get_available_themes',
         'test_group_search',
+        'test_get_group',
+        'test_get_group_by_name',
+        'test_get_group_by_name_v2',
+        'test_get_group_optional_conversations',
+        'test_get_members_of_group',
+        'test_get_admins_and_founder_of_group',
+        'test_get_groups_for_member',
+        # 'test_recover_group_for_founder',
+        'test_get_potential_groups_for_member',
     ]
 
     async def test_get_available_avatars(self) -> None:
@@ -473,6 +482,327 @@ class TestGroupV2(unittest.IsolatedAsyncioTestCase, TestCore):
         assert sync_r == async_r
         print('GroupSearch:', sync_r)
 
+    async def test_get_group(self) -> None:
+        group_id = 2603136
+        sync_r = self.sync_client.group_v2.get_group(group_id)
+        async_r = await self.async_client.group_v2.get_group(group_id)
+        assert sync_r == async_r
+        print('GetGroup:', sync_r)
+
+    async def test_get_group_by_name(self) -> None:
+        group_name = 'Slicing Squall'
+        group_type = GroupType.Clan
+        sync_r = self.sync_client.group_v2.get_group_by_name(group_name, group_type)
+        async_r = await self.async_client.group_v2.get_group_by_name(group_name, group_type)
+        assert sync_r == async_r
+        print('GetGroupByName:', sync_r)
+
+    async def test_get_group_by_name_v2(self) -> None:
+        group_name = 'Slicing Squall'
+        group_type = GroupType.Clan
+        sync_r = self.sync_client.group_v2.get_group_by_name_v2(group_name, group_type)
+        async_r = await self.async_client.group_v2.get_group_by_name_v2(group_name, group_type)
+        assert sync_r == async_r
+        print('GetGroupByNameV2:', sync_r)
+
+    async def test_get_group_optional_conversations(self) -> None:
+        group_id = 2603136
+        sync_r = self.sync_client.group_v2.get_group_optional_conversations(group_id)
+        async_r = await self.async_client.group_v2.get_group_optional_conversations(group_id)
+        assert async_r == sync_r
+        print('GetGroupOptionalConversations:', sync_r)
+
+    async def test_get_members_of_group(self) -> None:
+        group_id = 2603136
+        current_page = 1
+        name_search = 'Ar'
+        sync_r = self.sync_client.group_v2.get_members_of_group(
+            currentpage=current_page,
+            group_id=group_id,
+            name_search=name_search,
+        )
+        async_r = await self.async_client.group_v2.get_members_of_group(
+            currentpage=current_page,
+            group_id=group_id,
+            name_search=name_search,
+        )
+        assert async_r == sync_r
+        print('GetMembersOfGroup:', sync_r)
+
+    async def test_get_admins_and_founder_of_group(self) -> None:
+        group_id = 2603136
+        current_page = 1
+        sync_r = self.sync_client.group_v2.get_admins_and_founder_of_group(current_page, group_id)
+        async_r = await self.async_client.group_v2.get_admins_and_founder_of_group(current_page, group_id)
+        assert sync_r == async_r
+        print('GetAdminsAndFounderOfGroup:', sync_r)
+
+    async def test_get_groups_for_member(self) -> None:
+        filter = GroupsForMemberFilter.All
+        group_type = GroupType.Clan
+        membership_id = 19548659
+        membership_type = BungieMembershipType.BungieNext
+        sync_r = self.sync_client.group_v2.get_groups_for_member(
+            filter=filter,
+            group_type=group_type,
+            membership_id=membership_id,
+            membership_type=membership_type,
+        )
+        async_r = await self.async_client.group_v2.get_groups_for_member(
+            filter=filter,
+            group_type=group_type,
+            membership_id=membership_id,
+            membership_type=membership_type,
+        )
+        assert sync_r == async_r
+        print('GetGroupsForMember:', sync_r)
+
+    """
+    async def test_recover_group_for_founder(self) -> None:
+        group_type = GroupType.Clan
+        membership_id = 19548659
+        membership_type = BungieMembershipType.BungieNext
+        sync_r = self.sync_client.group_v2.recover_group_for_founder(
+            group_type, membership_id, membership_type
+        )
+        async_r = await self.async_client.group_v2.recover_group_for_founder(
+            group_type, membership_id, membership_type
+        )
+        assert sync_r == async_r
+        print('RecoverGroupForFounder:', sync_r)
+    """
+
+    async def test_get_potential_groups_for_member(self) -> None:
+        filter = GroupsForMemberFilter.All
+        group_type = GroupType.Clan
+        membership_id = 19548659
+        membership_type = BungieMembershipType.BungieNext
+        sync_r = self.sync_client.group_v2.get_potential_groups_for_member(
+            filter=filter,
+            group_type=group_type,
+            membership_id=membership_id,
+            membership_type=membership_type,
+        )
+        async_r = await self.async_client.group_v2.get_potential_groups_for_member(
+            filter=filter,
+            group_type=group_type,
+            membership_id=membership_id,
+            membership_type=membership_type,
+        )
+        assert sync_r == async_r
+        print('GetPotentialGroupsForMember:', sync_r)
+
+
+class TestTokens(unittest.IsolatedAsyncioTestCase, TestCore):
+    """
+    Coverage:
+    - [ ] Tokens.ForceDropsRepair: Excluded due to OAuth requirement.
+    - [ ] Tokens.ClaimPartnerOffer: Excluded due to OAuth requirement.
+    - [ ] Tokens.ApplyMissingPartnerOffersWithoutClaim: Excluded due to OAuth requirement.
+    - [ ] Tokens.GetPartnerOfferSkuHistory: Excluded due to OAuth requirement.
+    - [ ] Tokens.GetPartnerRewardHistory: Excluded due to OAuth requirement.
+    - [ ] Tokens.GetBungieRewardsForUser: Excluded due to OAuth requirement.
+    - [ ] Tokens.GetBungieRewardsForPlatformUser: Excluded due to OAuth requirement.
+    - [x] Tokens.GetBungieRewardsList
+    """
+    tests = [
+        'test_get_bungie_reward_list',
+    ]
+
+    async def test_get_bungie_reward_list(self) -> None:
+        sync_r = self.sync_client.tokens.get_bungie_rewards_list()
+        async_r = await self.async_client.tokens.get_bungie_rewards_list()
+        assert sync_r == async_r
+        print('GetBungieRewardList:', sync_r)
+
+
+class TestDestiny2(unittest.IsolatedAsyncioTestCase, TestCore):
+    """
+    Coverage:
+    - [ ] Destiny2.GetDestinyManifest
+    - [ ] Destiny2.GetDestinyEntityDefinition
+    - [ ] Destiny2.SearchDestinyPlayerByBungieName
+    - [ ] Destiny2.GetLinkedProfiles
+    - [ ] Destiny2.GetProfile
+    - [ ] Destiny2.GetCharacter
+    - [ ] Destiny2.GetClanWeeklyRewardState
+    - [ ] Destiny2.GetClanBannerSource
+    - [ ] Destiny2.GetItem
+    - [ ] Destiny2.GetVendors
+    - [ ] Destiny2.GetVendor
+    - [ ] Destiny2.GetPublicVendors Preview
+    - [ ] Destiny2.GetCollectibleNodeDetails
+    - [ ] Destiny2.TransferItem
+    - [ ] Destiny2.PullFromPostmaster
+    - [ ] Destiny2.EquipItem
+    - [ ] Destiny2.EquipItems
+    - [ ] Destiny2.SetItemLockState
+    - [ ] Destiny2.SetQuestTrackedState
+    - [ ] Destiny2.InsertSocketPlug Preview
+    - [ ] Destiny2.InsertSocketPlugFree Preview
+    - [ ] Destiny2.GetPostGameCarnageReport
+    - [ ] Destiny2.ReportOffensivePostGameCarnageReportPlayer
+    - [ ] Destiny2.GetHistoricalStatsDefinition
+    - [ ] Destiny2.GetClanLeaderboards Preview
+    - [ ] Destiny2.GetClanAggregateStats Preview
+    - [ ] Destiny2.GetLeaderboards Preview
+    - [ ] Destiny2.GetLeaderboardsForCharacter Preview
+    - [ ] Destiny2.SearchDestinyEntities
+    - [ ] Destiny2.GetHistoricalStats
+    - [ ] Destiny2.GetHistoricalStatsForAccount
+    - [ ] Destiny2.GetActivityHistory
+    - [ ] Destiny2.GetUniqueWeaponHistory
+    - [ ] Destiny2.GetDestinyAggregateActivityStats
+    - [ ] Destiny2.GetPublicMilestoneContent
+    - [ ] Destiny2.GetPublicMilestones
+    - [ ] Destiny2.AwaInitializeRequest
+    - [ ] Destiny2.AwaProvideAuthorizationResult
+    - [ ] Destiny2.AwaGetActionToken
+    """
+    tests = [
+        'test_get_destiny_manifest',
+        'test_get_destiny_entity_definition',
+        'test_search_destiny_player_by_bungie_name',
+        'test_get_linked_profiles',
+        'test_get_profile',
+        'test_get_character',
+    ]
+
+    async def test_get_destiny_manifest(self) -> None:
+        sync_r = self.sync_client.destiny2.get_destiny_manifest()
+        async_r = await self.async_client.destiny2.get_destiny_manifest()
+        assert sync_r == async_r
+        print('GetDestinyManifest:', sync_r)
+
+    async def test_get_destiny_entity_definition(self) -> None:
+        entity_type = 'DestinyInventoryItemDefinition'
+        hash_id = 3588934839
+        sync_r = self.sync_client.destiny2.get_destiny_entity_definition(
+            entity_type=entity_type,
+            hash_identifier=hash_id,
+        )
+        async_r = await self.async_client.destiny2.get_destiny_entity_definition(
+            entity_type=entity_type,
+            hash_identifier=hash_id,
+        )
+        assert sync_r == async_r
+        print('GetDestinyEntityDefinition:', sync_r)
+
+    async def test_search_destiny_player_by_bungie_name(self) -> None:
+        membership_type = BungieMembershipType.TigerSteam
+        name = 'Aryathel'
+        code = 7877
+        sync_r = self.sync_client.destiny2.search_destiny_player_by_bungie_name(
+            membership_type=membership_type,
+            display_name=name,
+            display_name_code=code,
+        )
+        async_r = await self.async_client.destiny2.search_destiny_player_by_bungie_name(
+            membership_type=membership_type,
+            display_name=name,
+            display_name_code=code,
+        )
+        assert sync_r == async_r
+        print('SearchDestinyPlayerByBungieName:', sync_r)
+
+    async def test_get_linked_profiles(self) -> None:
+        membership_id = 4611686018483530949
+        membership_type = BungieMembershipType.TigerSteam
+        sync_r = self.sync_client.destiny2.get_linked_profiles(
+            membership_id=membership_id,
+            membership_type=membership_type,
+        )
+        async_r = await self.async_client.destiny2.get_linked_profiles(
+            membership_id=membership_id,
+            membership_type=membership_type,
+        )
+        assert sync_r == async_r
+        print('GetLinkedProfiles:', sync_r)
+
+    async def test_get_profile(self) -> None:
+        membership_id = 4611686018483530949
+        membership_type = BungieMembershipType.TigerSteam
+        components = [
+            DestinyComponentType.VendorReceipts,
+            DestinyComponentType.ProfileInventories,
+            DestinyComponentType.ProfileCurrencies,
+            DestinyComponentType.Profiles,
+            DestinyComponentType.PlatformSilver,
+            DestinyComponentType.Kiosks,
+            DestinyComponentType.ItemSockets,
+            DestinyComponentType.ProfileProgression,
+            DestinyComponentType.PresentationNodes,
+            DestinyComponentType.Records,
+            DestinyComponentType.Collectibles,
+            DestinyComponentType.Transitory,
+            DestinyComponentType.Metrics,
+            DestinyComponentType.StringVariables,
+            DestinyComponentType.Characters,
+            DestinyComponentType.CharacterInventories,
+            DestinyComponentType.CharacterProgressions,
+            DestinyComponentType.CharacterRenderData,
+            DestinyComponentType.CharacterActivities,
+            DestinyComponentType.CharacterEquipment,
+            DestinyComponentType.Craftables,
+            DestinyComponentType.CurrencyLookups,
+        ]
+        sync_r = self.sync_client.destiny2.get_profile(
+            membership_id,
+            membership_type,
+            components,
+        )
+        async_r = await self.async_client.destiny2.get_profile(
+            membership_id,
+            membership_type,
+            components,
+        )
+        # Checking for equivalence on sub fields because timestamps do not align in full object.
+        assert sync_r.Response.characterEquipment == async_r.Response.characterEquipment
+        print('GetProfile: OK')
+
+    async def test_get_character(self) -> None:
+        character_id = 2305843009402927792
+        membership_id = 4611686018483530949
+        membership_type = BungieMembershipType.TigerSteam
+        components = [
+            DestinyComponentType.VendorReceipts,
+            DestinyComponentType.ProfileInventories,
+            DestinyComponentType.ProfileCurrencies,
+            DestinyComponentType.Profiles,
+            DestinyComponentType.PlatformSilver,
+            DestinyComponentType.Kiosks,
+            DestinyComponentType.ItemSockets,
+            DestinyComponentType.ProfileProgression,
+            DestinyComponentType.PresentationNodes,
+            DestinyComponentType.Records,
+            DestinyComponentType.Collectibles,
+            DestinyComponentType.Transitory,
+            DestinyComponentType.Metrics,
+            DestinyComponentType.StringVariables,
+            DestinyComponentType.Characters,
+            DestinyComponentType.CharacterInventories,
+            DestinyComponentType.CharacterProgressions,
+            DestinyComponentType.CharacterRenderData,
+            DestinyComponentType.CharacterActivities,
+            DestinyComponentType.CharacterEquipment,
+            DestinyComponentType.Craftables,
+            DestinyComponentType.CurrencyLookups,
+        ]
+        sync_r = self.sync_client.destiny2.get_character(character_id, membership_id, membership_type, components)
+        async_r = await self.async_client.destiny2.get_character(
+            character_id, membership_id, membership_type, components
+        )
+
+        assert sync_r == async_r
+        print('GetCharacter:', sync_r)
+
+    async def test_get_clan_weekly_reward_state(self) -> None:
+        group_id = 2603136
+        sync_r = self.sync_client.destiny2.get_clan_weekly_reward_state(group_id)
+        async_r = await self.async_client.destiny2.get_clan_weekly_reward_state(group_id)
+        assert sync_r == async_r
+        print('GetClanWeeklyRewardState:', sync_r)
+
 
 if __name__ == "__main__":
     tests = {
@@ -481,6 +811,8 @@ if __name__ == "__main__":
         'CONTENT': TestContent.suite(),
         'FORUM': TestForum.suite(),
         'GROUPV2': TestGroupV2.suite(),
+        'TOKENS': TestTokens.suite(),
+        'DESTINY2': TestDestiny2.suite(),
     }
 
     for name, test in tests.items():

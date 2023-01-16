@@ -113,6 +113,10 @@ class Endpoint:
     entities_path_name = 'entities'
     bungie_root_var = '{bungie_root}'
 
+    response_type_overrides = {
+        'get_destiny_entity_definition': 'entity_type'
+    }
+
     def __init__(
             self,
             path: str,
@@ -326,7 +330,13 @@ class Endpoint:
             content += '\n\n'
             content += StringUtils.gen_comment('Validate response', 2)
             content += '\n'
-            content += StringUtils.indent_str(f'return {self.response_type}.schema().loads(raw)', 2)
+            if self.func_name in self.response_type_overrides:
+                content += StringUtils.indent_str(
+                    f'return globals()[{self.response_type_overrides[self.func_name]}].schema().loads(raw)',
+                    2
+                )
+            else:
+                content += StringUtils.indent_str(f'return {self.response_type}.schema().loads(raw)', 2)
 
         return content
 
@@ -754,9 +764,10 @@ class EndpointCollection:
     sync_endpoints: list[Endpoint | OAuthEndpoint]
     async_endpoints: list[Endpoint | OAuthEndpoint]
 
-    def __init__(self, name: str, bungie_root: Server):
+    def __init__(self, name: str, bungie_root: Server, manifest_entities: list[Entity]):
         self.name = name
         self.bungie_root = bungie_root
+        self.manifest_entities = manifest_entities
         self.sync_imports = EntityImportCollection([
             EntityImport(
                 name=f'.{self.sync_client_file_name}',
@@ -775,6 +786,18 @@ class EndpointCollection:
         ])
         self.sync_endpoints = []
         self.async_endpoints = []
+
+        if self.name == 'Destiny2':
+            self.sync_imports.add_import(EntityImport(
+                name=f'.{self.entity_path_name}',
+                type=ImportType.relative,
+                imports=[e.name_safe for e in self.manifest_entities]
+            ))
+            self.async_imports.add_import(EntityImport(
+                name=f'.{self.entity_path_name}',
+                type=ImportType.relative,
+                imports=[e.name_safe for e in self.manifest_entities]
+            ))
 
     @property
     def name_sync(self) -> str:

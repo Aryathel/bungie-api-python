@@ -255,7 +255,11 @@ class APIGenerator:
                 if not coll_name:
                     coll_name = 'Core'
                 if coll_name not in self.endpoints:
-                    self.endpoints[coll_name] = EndpointCollection(coll_name, bungie_root=self.spec.servers[0])
+                    self.endpoints[coll_name] = EndpointCollection(
+                        coll_name,
+                        bungie_root=self.spec.servers[0],
+                        manifest_entities=self.entities.manifest_entities,
+                    )
                 self.endpoints[coll_name].add_endpoint(path, endpoint, self.entities)
                 bar()
 
@@ -602,7 +606,11 @@ class APIGenerator:
                     self.refresh_url = scheme.flows.authorizationCode.refreshUrl
                     self.oauth_scopes = scheme.flows.authorizationCode.scopes
 
-                    collection = EndpointCollection('Oauth', bungie_root=self.spec.servers[0])
+                    collection = EndpointCollection(
+                        'Oauth',
+                        bungie_root=self.spec.servers[0],
+                        manifest_entities=self.entities.manifest_entities,
+                    )
                     collection.add_oauth_endpoint(self.token_url, False)
                     collection.add_oauth_endpoint(self.refresh_url, True)
                     collection.write_files(os.path.join(self.generated_path, self.endpoints_path_name))
