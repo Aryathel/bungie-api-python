@@ -96,6 +96,8 @@ class EndpointParam:
                 return f'{self.snake_name}.value'
         elif self.is_datetime:
             return f'{self.snake_name}.isoformat()'
+        elif self.raw_type == 'bool':
+            return f'str({self.snake_name}).lower()'
         else:
             return self.snake_name
 

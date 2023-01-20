@@ -2,7 +2,7 @@ import unittest
 
 from generated.entities import ForumTopicsQuickDateEnum, ForumTopicsSortEnum, ForumTopicsCategoryFiltersEnum, \
     ForumPostSortEnum, GroupType, BungieMembershipType, GroupsForMemberFilter, DestinyComponentType, \
-    DestinyVendorFilter, DestinyActivityModeType
+    DestinyVendorFilter, DestinyActivityModeType, CommunityContentSortMode, TrendingEntryType, PlatformFriendType
 from tests.core import TestCore
 
 
@@ -1194,6 +1194,178 @@ class TestDestiny2(unittest.IsolatedAsyncioTestCase, TestCore):
         print('GetPublicMilestones: OK')
 
 
+class TestCommunityContent(unittest.IsolatedAsyncioTestCase, TestCore):
+    """
+    Coverage:
+    - [x] CommunityContent.GetCommunityContent
+    """
+    tests = [
+        'test_get_community_content',
+    ]
+
+    async def test_get_community_content(self) -> None:
+        sort = ForumTopicsCategoryFiltersEnum.None_
+        page = 0
+        media_filter = CommunityContentSortMode.Latest
+
+        sync_r = self.sync_client.community_content.get_community_content(
+            media_filter=media_filter,
+            page=page,
+            sort=sort,
+        )
+        async_r = await self.async_client.community_content.get_community_content(
+            media_filter=media_filter,
+            page=page,
+            sort=sort,
+        )
+        assert sync_r == async_r
+        print('GetCommunityContent:', sync_r)
+
+
+class TestTrending(unittest.IsolatedAsyncioTestCase, TestCore):
+    """
+    Coverage:
+    - [x] Trending.GetTrendingCategories
+    - [x] Trending.GetTrendingCategory
+    - [x] Trending.GetTrendingEntryDetail
+    """
+    tests = [
+        'test_get_trending_categories',
+        'test_get_trending_category',
+        'test_get_trending_entry_detail',
+    ]
+
+    async def test_get_trending_categories(self) -> None:
+        sync_r = self.sync_client.trending.get_trending_categories()
+        async_r = await self.async_client.trending.get_trending_categories()
+
+        assert [c.categoryName for c in sync_r.Response.categories] == [c.categoryName for c in async_r.Response.categories]
+        print('GetTrendingCategories: OK')
+
+    async def test_get_trending_category(self) -> None:
+        category_id = 'News'
+        page = 1
+
+        sync_r = self.sync_client.trending.get_trending_category(
+            category_id=category_id,
+            page_number=page,
+        )
+        async_r = await self.async_client.trending.get_trending_category(
+            category_id=category_id,
+            page_number=page,
+        )
+
+        assert sync_r.Response.results[0].displayName == async_r.Response.results[0].displayName
+        print('GetTrendingCategory: OK')
+
+    async def test_get_trending_entry_detail(self) -> None:
+        entry_type = TrendingEntryType.News
+        identifier = 51515
+
+        sync_r = self.sync_client.trending.get_trending_entry_detail(
+            identifier=identifier,
+            trending_entry_type=entry_type
+        )
+        async_r = await self.async_client.trending.get_trending_entry_detail(
+            identifier=identifier,
+            trending_entry_type=entry_type,
+        )
+
+        assert sync_r == async_r
+        print('GetTrendingEntryDetail: OK')
+
+
+class TestFireteam(unittest.IsolatedAsyncioTestCase, TestCore):
+    """
+    Coverage:
+    - [ ] Fireteam.GetActivePrivateClanFireteamCount: Requires OAuth.
+    - [ ] Fireteam.GetAvailableClanFireteams: Requires OAuth.
+    - [ ] Fireteam.SearchPublicAvailableClanFireteams: Requires OAuth.
+    - [ ] Fireteam.GetMyClanFireteams: Requires OAuth.
+    - [ ] Fireteam.GetClanFireteam: Requires OAuth.
+    """
+    tests = []
+
+
+class TestSocial(unittest.IsolatedAsyncioTestCase, TestCore):
+    """
+    Coverage:
+    - [ ] Social.GetFriendList: Requires OAuth
+    - [ ] Social.GetFriendRequestList: Requires OAuth
+    - [ ] Social.IssueFriendRequest: Requires OAuth
+    - [ ] Social.AcceptFriendRequest: Requires OAuth
+    - [ ] Social.DeclineFriendRequest: Requires OAuth
+    - [ ] Social.RemoveFriend: Requires OAuth
+    - [ ] Social.RemoveFriendRequest: Requires OAuth
+    - [ ] Social.GetPlatformFriendList: Requires OAuth
+    """
+    tests = []
+
+    """
+    async def test_get_platform_friend_list(self) -> None:
+        friend_platform = PlatformFriendType.Steam
+        page = 0
+
+        sync_r = self.sync_client.social.get_platform_friend_list(
+            friend_platform=friend_platform,
+            page=page,
+        )
+        async_r = self.async_client.social.get_platform_friend_list(
+            friend_platform=friend_platform,
+            page=page,
+        )
+
+        assert sync_r == async_r
+        print('GetPlatformFriendList:', sync_r)
+    """
+
+
+class TestCore(unittest.IsolatedAsyncioTestCase, TestCore):
+    """
+    Coverage:
+    - [x] Core.GetAvailableLocales
+    - [x] Core.GetCommonSettings
+    - [x] Core.GetUserSystemOverrides
+    - [x] Core.GetGlobalAlerts
+    """
+    tests = [
+        'test_get_available_locales',
+        'test_get_common_settings',
+        'test_get_user_system_overrides',
+        'test_get_global_alerts',
+    ]
+
+    async def test_get_available_locales(self) -> None:
+        sync_r = self.sync_client.core.get_available_locales()
+        async_r = await self.async_client.core.get_available_locales()
+
+        assert sync_r == async_r
+        print('GetAvailableLocales:', sync_r)
+
+    async def test_get_common_settings(self) -> None:
+        sync_r = self.sync_client.core.get_common_settings()
+        async_r = await self.async_client.core.get_common_settings()
+
+        assert sync_r == async_r
+        print('GetCommonSettings:', sync_r)
+
+    async def test_get_user_system_overrides(self) -> None:
+        sync_r = self.sync_client.core.get_user_system_overrides()
+        async_r = await self.async_client.core.get_user_system_overrides()
+
+        assert sync_r.ErrorCode == async_r.ErrorCode
+        print('GetuserSystemOverrides:', sync_r)
+
+    async def test_get_global_alerts(self) -> None:
+        include_streaming = True
+
+        sync_r = self.sync_client.core.get_global_alerts(include_streaming)
+        async_r = await self.async_client.core.get_global_alerts(include_streaming)
+
+        assert sync_r == async_r
+        print('GetGlobalAlerts:', sync_r)
+
+
 if __name__ == "__main__":
     TestApp.run_test()
     TestUser.run_test()
@@ -1203,5 +1375,10 @@ if __name__ == "__main__":
     TestGroupV2.run_test()
     TestTokens.run_test()
     TestDestiny2.run_test()
+    TestCommunityContent.run_test()
+    TestTrending.run_test()
+    TestFireteam.run_test()
+    TestSocial.run_test()
+    TestCore.run_test()
 
     # unittest.main()

@@ -39,5 +39,5 @@ class TestCore(unittest.TestCase):
 
     @classmethod
     def run_test(cls) -> None:
-        print(f' {cls.__name__.lstrip("Test").upper()} TESTS '.center(100, '='))
+        print(f' {cls.__name__.replace("Test", "").upper()} TESTS '.center(100, '='))
         unittest.TextTestRunner().run(cls.suite())
