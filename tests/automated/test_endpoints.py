@@ -1372,7 +1372,6 @@ if __name__ == "__main__":
     TestUser.run_test()
     TestContent.run_test()
     TestForum.run_test()
-    TestForum.run_test()
     TestGroupV2.run_test()
     TestTokens.run_test()
     TestDestiny2.run_test()
