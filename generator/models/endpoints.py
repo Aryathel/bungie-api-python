@@ -147,6 +147,12 @@ class Endpoint:
     @property
     def description(self) -> str:
         desc = self.endpoint.description
+
+        if self.is_preview:
+            desc += '\n\n'
+            desc += 'DISCLAIMER: This endpoint is a preview endpoint and may undergo frequent updates/changes and ' \
+                    'have incomplete data structures.'
+
         if self.requires_oauth:
             desc += '\n\n'
             desc += f'Requires OAuth Scopes:\n'
@@ -160,6 +166,15 @@ class Endpoint:
     @property
     def post(self) -> bool:
         return self.endpoint.post is not None
+
+    @property
+    def is_preview(self) -> bool:
+        if self.get:
+            return bool(self.endpoint.get.x_preview)
+        elif self.post:
+            return bool(self.endpoint.post.x_preview)
+        else:
+            return False
 
     @property
     def all_params(self) -> list[EndpointParam]:
@@ -265,13 +280,14 @@ class Endpoint:
             content += StringUtils.gen_comment('Enum list validation.', 2)
             content += '\n'
             for p in self.array_enum_params:
-                content += StringUtils.indent_str('tmp = []\n', 2)
-                content += StringUtils.indent_str(f'for e in {p.snake_name}:\n', 2)
-                content += StringUtils.indent_str(f'if isinstance(e, int):\n', 3)
-                content += StringUtils.indent_str(f'tmp.append({p.raw_type}(e))\n', 4)
-                content += StringUtils.indent_str(f'else:\n', 3)
-                content += StringUtils.indent_str(f'tmp.append(e)\n', 4)
-                content += StringUtils.indent_str(f'{p.snake_name} = tmp\n', 2)
+                content += StringUtils.indent_str(f'if {p.snake_name}:\n', 2)
+                content += StringUtils.indent_str('tmp = []\n', 3)
+                content += StringUtils.indent_str(f'for e in {p.snake_name}:\n', 3)
+                content += StringUtils.indent_str(f'if isinstance(e, int):\n', 4)
+                content += StringUtils.indent_str(f'tmp.append({p.raw_type}(e))\n', 5)
+                content += StringUtils.indent_str(f'else:\n', 4)
+                content += StringUtils.indent_str(f'tmp.append(e)\n', 5)
+                content += StringUtils.indent_str(f'{p.snake_name} = tmp\n', 3)
             content += '\n'
 
         if self.parameters.get('query'):

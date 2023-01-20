@@ -780,6 +780,8 @@ class EntityCollection:
         'Destiny.Definitions.Collectibles.DestinyCollectibleAcquisitionBlock',
 
         'Destiny.Entities.Items.DestinyItemComponent',
+
+        'Destiny.HistoricalStats.Definitions.DestinyHistoricalStatsDefinition',
     ]
 
     def __init__(self):

@@ -36,3 +36,8 @@ class TestCore(unittest.TestCase):
         for test in cls.tests:
             suite.addTest(cls(test))
         return suite
+
+    @classmethod
+    def run_test(cls) -> None:
+        print(f' {cls.__name__.lstrip("Test").upper()} TESTS '.center(100, '='))
+        unittest.TextTestRunner().run(cls.suite())

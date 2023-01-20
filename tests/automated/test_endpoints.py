@@ -1,7 +1,8 @@
 import unittest
 
 from generated.entities import ForumTopicsQuickDateEnum, ForumTopicsSortEnum, ForumTopicsCategoryFiltersEnum, \
-    ForumPostSortEnum, GroupType, BungieMembershipType, GroupsForMemberFilter, DestinyComponentType
+    ForumPostSortEnum, GroupType, BungieMembershipType, GroupsForMemberFilter, DestinyComponentType, \
+    DestinyVendorFilter, DestinyActivityModeType
 from tests.core import TestCore
 
 
@@ -17,7 +18,7 @@ class TestApp(unittest.IsolatedAsyncioTestCase, TestCore):
         sync_r = self.sync_client.app.get_bungie_applications()
         async_r = await self.async_client.app.get_bungie_applications()
         assert sync_r == async_r
-        print('GetBungieApplications:', sync_r)
+        print('GetBungieApplications: OK')
 
 
 class TestUser(unittest.IsolatedAsyncioTestCase, TestCore):
@@ -47,14 +48,14 @@ class TestUser(unittest.IsolatedAsyncioTestCase, TestCore):
         sync_r = self.sync_client.user.get_bungie_net_user_by_id(user_id)
         async_r = await self.async_client.user.get_bungie_net_user_by_id(user_id)
         assert sync_r == async_r
-        print('GetBungieNetUserById:', sync_r)
+        print('GetBungieNetUserById: OK')
 
     async def test_get_sanitized_platform_display_names(self) -> None:
         membership_id = 19548659
         sync_r = self.sync_client.user.get_sanitized_platform_display_names(membership_id)
         async_r = await self.async_client.user.get_sanitized_platform_display_names(membership_id)
         assert sync_r == async_r
-        print('GetSanitizedPlatformDisplayNames:', sync_r)
+        print('GetSanitizedPlatformDisplayNames: OK')
 
     """ Seems to require OAuth? https://github.com/Bungie-net/api/issues/1769
     async def test_get_credential_types_for_target_account(self) -> None:
@@ -69,7 +70,7 @@ class TestUser(unittest.IsolatedAsyncioTestCase, TestCore):
         sync_r = self.sync_client.user.get_available_themes()
         async_r = await self.async_client.user.get_available_themes()
         assert sync_r == async_r
-        print('GetAvailableThemes:', sync_r)
+        print('GetAvailableThemes: OK')
 
     async def test_get_membership_data_by_id(self) -> None:
         membership_id = 19548659
@@ -83,7 +84,7 @@ class TestUser(unittest.IsolatedAsyncioTestCase, TestCore):
             membership_type=membership_type,
         )
         assert sync_r == async_r
-        print('GetMembershipDataById:', sync_r)
+        print('GetMembershipDataById: OK')
 
     async def test_get_membership_from_hard_linked_credential(self) -> None:
         credential = '76561198119241330'
@@ -91,7 +92,7 @@ class TestUser(unittest.IsolatedAsyncioTestCase, TestCore):
         sync_r = self.sync_client.user.get_membership_from_hard_linked_credential(credential, cr_type)
         async_r = await self.async_client.user.get_membership_from_hard_linked_credential(credential, cr_type)
         assert sync_r == async_r
-        print('GetMembershipFromHardLinkedCredential:', sync_r)
+        print('GetMembershipFromHardLinkedCredential: OK')
 
     async def test_search_by_global_name_post(self) -> None:
         page = 0
@@ -102,7 +103,7 @@ class TestUser(unittest.IsolatedAsyncioTestCase, TestCore):
             page=page
         )
         assert async_r == sync_r
-        print('SearchByGlobalNamePost:', sync_r)
+        print('SearchByGlobalNamePost: OK')
 
 
 class TestContent(unittest.IsolatedAsyncioTestCase, TestCore):
@@ -131,7 +132,7 @@ class TestContent(unittest.IsolatedAsyncioTestCase, TestCore):
         sync_r = self.sync_client.content.get_content_type(c_type)
         async_r = await self.async_client.content.get_content_type(c_type)
         assert sync_r == async_r
-        print('GetContentType:', sync_r)
+        print('GetContentType: OK')
 
     async def test_get_content_by_id(self) -> None:
         c_id = 51999
@@ -139,7 +140,7 @@ class TestContent(unittest.IsolatedAsyncioTestCase, TestCore):
         sync_r = self.sync_client.content.get_content_by_id(c_id, locale)
         async_r = await self.async_client.content.get_content_by_id(c_id, locale)
         assert sync_r == async_r
-        print('GetContentById:', sync_r)
+        print('GetContentById: OK')
 
     async def test_get_content_by_tag_and_type(self) -> None:
         locale = 'en'
@@ -148,7 +149,7 @@ class TestContent(unittest.IsolatedAsyncioTestCase, TestCore):
         sync_r = self.sync_client.content.get_content_by_tag_and_type(locale, tag, type)
         async_r = await self.async_client.content.get_content_by_tag_and_type(locale, tag, type)
         assert sync_r == async_r
-        print('GetContentByTagAndType:', sync_r)
+        print('GetContentByTagAndType: OK')
 
     async def test_search_content_with_text(self) -> None:
         locale = 'en'
@@ -168,7 +169,7 @@ class TestContent(unittest.IsolatedAsyncioTestCase, TestCore):
             searchtext=searchtext,
         )
         assert sync_r == async_r
-        print('SearchContentWithText:', async_r)
+        print('SearchContentWithText: OK')
 
     async def test_search_content_by_tag_and_type(self) -> None:
         locale = 'en'
@@ -178,7 +179,7 @@ class TestContent(unittest.IsolatedAsyncioTestCase, TestCore):
         sync_r = self.sync_client.content.search_content_by_tag_and_type(locale, tag, ctype, currentpage)
         async_r = await self.async_client.content.search_content_by_tag_and_type(locale, tag, ctype, currentpage)
         assert sync_r == async_r
-        print('SearchContentByTagAndType:', sync_r)
+        print('SearchContentByTagAndType: OK')
 
     async def test_search_help_articles(self) -> None:
         searchtext = 'multikill'
@@ -186,7 +187,7 @@ class TestContent(unittest.IsolatedAsyncioTestCase, TestCore):
         sync_r = self.sync_client.content.search_help_articles(searchtext, size)
         async_r = await self.async_client.content.search_help_articles(searchtext, size)
         assert sync_r == async_r
-        print('SearchHelpArticles:', sync_r)
+        print('SearchHelpArticles: OK')
 
     async def test_rss_news_articles(self) -> None:
         page_token = 0
@@ -195,7 +196,7 @@ class TestContent(unittest.IsolatedAsyncioTestCase, TestCore):
         sync_r = self.sync_client.content.rss_news_articles(page_token, category_filter, include_body)
         async_r = await self.async_client.content.rss_news_articles(page_token, category_filter, include_body)
         assert sync_r == async_r
-        print('RssNewsArticles:', sync_r)
+        print('RssNewsArticles: OK')
 
 
 class TestForum(unittest.IsolatedAsyncioTestCase, TestCore):
@@ -252,7 +253,7 @@ class TestForum(unittest.IsolatedAsyncioTestCase, TestCore):
             locales='en',
         )
         assert sync_r == async_r
-        print('GetTopicsPaged:', sync_r)
+        print('GetTopicsPaged: OK')
 
     async def test_get_core_topics_paged(self) -> None:
         page = 0
@@ -273,7 +274,7 @@ class TestForum(unittest.IsolatedAsyncioTestCase, TestCore):
         # Check for just the most upvoted responses matching,
         # because the forums change too quickly to verify the entire response matching.
         assert sync_r.Response.results[0] == async_r.Response.results[0]
-        print('GetCoreTopicsPaged:', sync_r)
+        print('GetCoreTopicsPaged: OK')
 
     async def test_get_posts_threaded_pages(self) -> None:
         get_parent_post = True
@@ -303,7 +304,7 @@ class TestForum(unittest.IsolatedAsyncioTestCase, TestCore):
             sort_mode=sort_mode,
         )
         assert sync_r == async_r
-        print('GetPostsThreadedPaged:', sync_r)
+        print('GetPostsThreadedPaged: OK')
 
     async def test_get_posts_threaded_paged_from_child(self) -> None:
         child_post_id = 262235995
@@ -334,7 +335,7 @@ class TestForum(unittest.IsolatedAsyncioTestCase, TestCore):
         )
 
         assert async_r == sync_r
-        print('GetPostsThreadedPagedFromChild:', sync_r)
+        print('GetPostsThreadedPagedFromChild: OK')
 
     async def test_get_post_and_parent(self) -> None:
         child_post_id = 262235995
@@ -349,7 +350,7 @@ class TestForum(unittest.IsolatedAsyncioTestCase, TestCore):
             showbanned=showbanned,
         )
         assert sync_r == async_r
-        print('GetPostAndParent:', sync_r)
+        print('GetPostAndParent: OK')
 
     """
     async def test_get_post_and_parent_awaiting_approval(self) -> None:
@@ -365,7 +366,7 @@ class TestForum(unittest.IsolatedAsyncioTestCase, TestCore):
             showbanned=showbanned,
         )
         assert sync_r == async_r
-        print('GetPostAndParentAwaitingApproval:', sync_r)
+        print('GetPostAndParentAwaitingApproval: OK')
     """
 
     """
@@ -375,7 +376,7 @@ class TestForum(unittest.IsolatedAsyncioTestCase, TestCore):
         sync_r = self.sync_client.forum.get_topic_for_content(content_id)
         async_r = await self.async_client.forum.get_topic_for_content(content_id)
         assert sync_r == async_r
-        print('GetTopicForContent:', sync_r)
+        print('GetTopicForContent: OK')
     """
 
     async def test_get_forum_tag_suggestions(self) -> None:
@@ -383,14 +384,14 @@ class TestForum(unittest.IsolatedAsyncioTestCase, TestCore):
         sync_r = self.sync_client.forum.get_forum_tag_suggestions(partial_tag)
         async_r = await self.async_client.forum.get_forum_tag_suggestions(partial_tag)
         assert sync_r == async_r
-        print('GetForumTagSuggestions:', sync_r)
+        print('GetForumTagSuggestions: OK')
 
     async def test_get_poll(self) -> None:
         topic_id = 262238856
         sync_r = self.sync_client.forum.get_poll(topic_id)
         async_r = await self.async_client.forum.get_poll(topic_id)
         assert sync_r == async_r
-        print('GetPoll:', sync_r)
+        print('GetPoll: OK')
 
     """
     async def test_get_recruitment_thread_summaries(self) -> None:
@@ -398,7 +399,7 @@ class TestForum(unittest.IsolatedAsyncioTestCase, TestCore):
         sync_r = self.sync_client.forum.get_recruitment_thread_summaries(ids)
         async_r = await self.async_client.forum.get_recruitment_thread_summaries(ids)
         assert sync_r == async_r
-        print('GetRecruitmentThreadSummaries:', sync_r)
+        print('GetRecruitmentThreadSummaries: OK')
     """
 
 
@@ -459,13 +460,13 @@ class TestGroupV2(unittest.IsolatedAsyncioTestCase, TestCore):
         sync_r = self.sync_client.group_v2.get_available_avatars()
         async_r = await self.async_client.group_v2.get_available_avatars()
         assert sync_r == async_r
-        print('GetAvailableAvatars:', sync_r)
+        print('GetAvailableAvatars: OK')
 
     async def test_get_available_themes(self) -> None:
         sync_r = self.sync_client.group_v2.get_available_themes()
         async_r = await self.async_client.group_v2.get_available_themes()
         assert sync_r == async_r
-        print('GetAvailableThemes:', sync_r)
+        print('GetAvailableThemes: OK')
 
     async def test_group_search(self) -> None:
         name = 'Slicing Squall'
@@ -480,14 +481,14 @@ class TestGroupV2(unittest.IsolatedAsyncioTestCase, TestCore):
             group_type=gt,
         )
         assert sync_r == async_r
-        print('GroupSearch:', sync_r)
+        print('GroupSearch: OK')
 
     async def test_get_group(self) -> None:
         group_id = 2603136
         sync_r = self.sync_client.group_v2.get_group(group_id)
         async_r = await self.async_client.group_v2.get_group(group_id)
         assert sync_r == async_r
-        print('GetGroup:', sync_r)
+        print('GetGroup: OK')
 
     async def test_get_group_by_name(self) -> None:
         group_name = 'Slicing Squall'
@@ -495,7 +496,7 @@ class TestGroupV2(unittest.IsolatedAsyncioTestCase, TestCore):
         sync_r = self.sync_client.group_v2.get_group_by_name(group_name, group_type)
         async_r = await self.async_client.group_v2.get_group_by_name(group_name, group_type)
         assert sync_r == async_r
-        print('GetGroupByName:', sync_r)
+        print('GetGroupByName: OK')
 
     async def test_get_group_by_name_v2(self) -> None:
         group_name = 'Slicing Squall'
@@ -503,14 +504,14 @@ class TestGroupV2(unittest.IsolatedAsyncioTestCase, TestCore):
         sync_r = self.sync_client.group_v2.get_group_by_name_v2(group_name, group_type)
         async_r = await self.async_client.group_v2.get_group_by_name_v2(group_name, group_type)
         assert sync_r == async_r
-        print('GetGroupByNameV2:', sync_r)
+        print('GetGroupByNameV2: OK')
 
     async def test_get_group_optional_conversations(self) -> None:
         group_id = 2603136
         sync_r = self.sync_client.group_v2.get_group_optional_conversations(group_id)
         async_r = await self.async_client.group_v2.get_group_optional_conversations(group_id)
         assert async_r == sync_r
-        print('GetGroupOptionalConversations:', sync_r)
+        print('GetGroupOptionalConversations: OK')
 
     async def test_get_members_of_group(self) -> None:
         group_id = 2603136
@@ -527,7 +528,7 @@ class TestGroupV2(unittest.IsolatedAsyncioTestCase, TestCore):
             name_search=name_search,
         )
         assert async_r == sync_r
-        print('GetMembersOfGroup:', sync_r)
+        print('GetMembersOfGroup: OK')
 
     async def test_get_admins_and_founder_of_group(self) -> None:
         group_id = 2603136
@@ -535,7 +536,7 @@ class TestGroupV2(unittest.IsolatedAsyncioTestCase, TestCore):
         sync_r = self.sync_client.group_v2.get_admins_and_founder_of_group(current_page, group_id)
         async_r = await self.async_client.group_v2.get_admins_and_founder_of_group(current_page, group_id)
         assert sync_r == async_r
-        print('GetAdminsAndFounderOfGroup:', sync_r)
+        print('GetAdminsAndFounderOfGroup: OK')
 
     async def test_get_groups_for_member(self) -> None:
         filter = GroupsForMemberFilter.All
@@ -555,7 +556,7 @@ class TestGroupV2(unittest.IsolatedAsyncioTestCase, TestCore):
             membership_type=membership_type,
         )
         assert sync_r == async_r
-        print('GetGroupsForMember:', sync_r)
+        print('GetGroupsForMember: OK')
 
     """
     async def test_recover_group_for_founder(self) -> None:
@@ -569,7 +570,7 @@ class TestGroupV2(unittest.IsolatedAsyncioTestCase, TestCore):
             group_type, membership_id, membership_type
         )
         assert sync_r == async_r
-        print('RecoverGroupForFounder:', sync_r)
+        print('RecoverGroupForFounder: OK')
     """
 
     async def test_get_potential_groups_for_member(self) -> None:
@@ -590,7 +591,7 @@ class TestGroupV2(unittest.IsolatedAsyncioTestCase, TestCore):
             membership_type=membership_type,
         )
         assert sync_r == async_r
-        print('GetPotentialGroupsForMember:', sync_r)
+        print('GetPotentialGroupsForMember: OK')
 
 
 class TestTokens(unittest.IsolatedAsyncioTestCase, TestCore):
@@ -613,51 +614,51 @@ class TestTokens(unittest.IsolatedAsyncioTestCase, TestCore):
         sync_r = self.sync_client.tokens.get_bungie_rewards_list()
         async_r = await self.async_client.tokens.get_bungie_rewards_list()
         assert sync_r == async_r
-        print('GetBungieRewardList:', sync_r)
+        print('GetBungieRewardList: OK')
 
 
 class TestDestiny2(unittest.IsolatedAsyncioTestCase, TestCore):
     """
     Coverage:
-    - [ ] Destiny2.GetDestinyManifest
-    - [ ] Destiny2.GetDestinyEntityDefinition
-    - [ ] Destiny2.SearchDestinyPlayerByBungieName
-    - [ ] Destiny2.GetLinkedProfiles
-    - [ ] Destiny2.GetProfile
-    - [ ] Destiny2.GetCharacter
-    - [ ] Destiny2.GetClanWeeklyRewardState
-    - [ ] Destiny2.GetClanBannerSource
-    - [ ] Destiny2.GetItem
-    - [ ] Destiny2.GetVendors
-    - [ ] Destiny2.GetVendor
-    - [ ] Destiny2.GetPublicVendors Preview
-    - [ ] Destiny2.GetCollectibleNodeDetails
-    - [ ] Destiny2.TransferItem
-    - [ ] Destiny2.PullFromPostmaster
-    - [ ] Destiny2.EquipItem
-    - [ ] Destiny2.EquipItems
-    - [ ] Destiny2.SetItemLockState
-    - [ ] Destiny2.SetQuestTrackedState
-    - [ ] Destiny2.InsertSocketPlug Preview
-    - [ ] Destiny2.InsertSocketPlugFree Preview
-    - [ ] Destiny2.GetPostGameCarnageReport
-    - [ ] Destiny2.ReportOffensivePostGameCarnageReportPlayer
-    - [ ] Destiny2.GetHistoricalStatsDefinition
-    - [ ] Destiny2.GetClanLeaderboards Preview
-    - [ ] Destiny2.GetClanAggregateStats Preview
-    - [ ] Destiny2.GetLeaderboards Preview
-    - [ ] Destiny2.GetLeaderboardsForCharacter Preview
-    - [ ] Destiny2.SearchDestinyEntities
-    - [ ] Destiny2.GetHistoricalStats
-    - [ ] Destiny2.GetHistoricalStatsForAccount
-    - [ ] Destiny2.GetActivityHistory
-    - [ ] Destiny2.GetUniqueWeaponHistory
-    - [ ] Destiny2.GetDestinyAggregateActivityStats
-    - [ ] Destiny2.GetPublicMilestoneContent
-    - [ ] Destiny2.GetPublicMilestones
-    - [ ] Destiny2.AwaInitializeRequest
-    - [ ] Destiny2.AwaProvideAuthorizationResult
-    - [ ] Destiny2.AwaGetActionToken
+    - [x] Destiny2.GetDestinyManifest
+    - [x] Destiny2.GetDestinyEntityDefinition
+    - [x] Destiny2.SearchDestinyPlayerByBungieName
+    - [x] Destiny2.GetLinkedProfiles
+    - [x] Destiny2.GetProfile
+    - [x] Destiny2.GetCharacter
+    - [x] Destiny2.GetClanWeeklyRewardState
+    - [x] Destiny2.GetClanBannerSource
+    - [x] Destiny2.GetItem
+    - [ ] Destiny2.GetVendors: Always get an "InsufficientPrivileges" error, likely needs OAuth.
+    - [ ] Destiny2.GetVendor: Always get an "InsufficientPrivileges" error, likely needs OAuth.
+    - [x] Destiny2.GetPublicVendors
+    - [x] Destiny2.GetCollectibleNodeDetails
+    - [ ] Destiny2.TransferItem: Requires OAuth
+    - [ ] Destiny2.PullFromPostmaster: Requires OAuth
+    - [ ] Destiny2.EquipItem: Requires OAuth
+    - [ ] Destiny2.EquipItems: Requires OAuth
+    - [ ] Destiny2.SetItemLockState: Requires OAuth
+    - [ ] Destiny2.SetQuestTrackedState: Requires OAuth
+    - [ ] Destiny2.InsertSocketPlug: Requires OAuth
+    - [ ] Destiny2.InsertSocketPlugFree: Requires OAuth
+    - [x] Destiny2.GetPostGameCarnageReport
+    - [ ] Destiny2.ReportOffensivePostGameCarnageReportPlayer: Requires OAuth
+    - [x] Destiny2.GetHistoricalStatsDefinition
+    - [x] Destiny2.GetClanLeaderboards
+    - [x] Destiny2.GetClanAggregateStats
+    - [ ] Destiny2.GetLeaderboards: Excluded because it currently is not yet returning usable data.
+    - [ ] Destiny2.GetLeaderboardsForCharacter: Requires OAuth
+    - [x] Destiny2.SearchDestinyEntities
+    - [x] Destiny2.GetHistoricalStats
+    - [x] Destiny2.GetHistoricalStatsForAccount
+    - [x] Destiny2.GetActivityHistory
+    - [x] Destiny2.GetUniqueWeaponHistory
+    - [x] Destiny2.GetDestinyAggregateActivityStats
+    - [x] Destiny2.GetPublicMilestoneContent
+    - [x] Destiny2.GetPublicMilestones
+    - [ ] Destiny2.AwaInitializeRequest: Requires OAuth.
+    - [ ] Destiny2.AwaProvideAuthorizationResult: Requires Awa workflow, which requires OAuth.
+    - [ ] Destiny2.AwaGetActionToken: Requires OAuth.
     """
     tests = [
         'test_get_destiny_manifest',
@@ -666,13 +667,34 @@ class TestDestiny2(unittest.IsolatedAsyncioTestCase, TestCore):
         'test_get_linked_profiles',
         'test_get_profile',
         'test_get_character',
+        'test_get_clan_weekly_reward_state',
+        'test_get_clan_banner_source',
+        'test_get_item',
+        # 'test_get_vendors',
+        # 'test_get_vendor',
+        'test_get_public_vendors',
+        'test_get_collectible_node_details',
+        'test_get_post_game_carnage_report',
+        'test_get_historical_stats_definition',
+        'test_get_clan_leaderboards',
+        'test_get_clan_aggregate_stats',
+        # 'test_get_leaderboards',
+        # 'test_get_leaderboards_for_character',
+        'test_search_destiny_entities',
+        'test_get_historical_stats',
+        'test_get_historical_stats_for_account',
+        'test_get_activity_history',
+        'test_get_unique_weapon_history',
+        'test_get_destiny_aggregate_activity_stats',
+        'test_get_public_milestone_content',
+        'test_get_public_milestones',
     ]
 
     async def test_get_destiny_manifest(self) -> None:
         sync_r = self.sync_client.destiny2.get_destiny_manifest()
         async_r = await self.async_client.destiny2.get_destiny_manifest()
         assert sync_r == async_r
-        print('GetDestinyManifest:', sync_r)
+        print('GetDestinyManifest: OK')
 
     async def test_get_destiny_entity_definition(self) -> None:
         entity_type = 'DestinyInventoryItemDefinition'
@@ -686,7 +708,7 @@ class TestDestiny2(unittest.IsolatedAsyncioTestCase, TestCore):
             hash_identifier=hash_id,
         )
         assert sync_r == async_r
-        print('GetDestinyEntityDefinition:', sync_r)
+        print('GetDestinyEntityDefinition: OK')
 
     async def test_search_destiny_player_by_bungie_name(self) -> None:
         membership_type = BungieMembershipType.TigerSteam
@@ -703,7 +725,7 @@ class TestDestiny2(unittest.IsolatedAsyncioTestCase, TestCore):
             display_name_code=code,
         )
         assert sync_r == async_r
-        print('SearchDestinyPlayerByBungieName:', sync_r)
+        print('SearchDestinyPlayerByBungieName: OK')
 
     async def test_get_linked_profiles(self) -> None:
         membership_id = 4611686018483530949
@@ -717,7 +739,7 @@ class TestDestiny2(unittest.IsolatedAsyncioTestCase, TestCore):
             membership_type=membership_type,
         )
         assert sync_r == async_r
-        print('GetLinkedProfiles:', sync_r)
+        print('GetLinkedProfiles: OK')
 
     async def test_get_profile(self) -> None:
         membership_id = 4611686018483530949
@@ -794,29 +816,392 @@ class TestDestiny2(unittest.IsolatedAsyncioTestCase, TestCore):
         )
 
         assert sync_r == async_r
-        print('GetCharacter:', sync_r)
+        print('GetCharacter: OK')
 
     async def test_get_clan_weekly_reward_state(self) -> None:
         group_id = 2603136
         sync_r = self.sync_client.destiny2.get_clan_weekly_reward_state(group_id)
         async_r = await self.async_client.destiny2.get_clan_weekly_reward_state(group_id)
         assert sync_r == async_r
-        print('GetClanWeeklyRewardState:', sync_r)
+        print('GetClanWeeklyRewardState: OK')
+
+    async def test_get_clan_banner_source(self) -> None:
+        sync_r = self.sync_client.destiny2.get_clan_banner_source()
+        async_r = await self.async_client.destiny2.get_clan_banner_source()
+        assert sync_r == async_r
+        print('GetClanBannerSource: OK')
+
+    async def test_get_item(self) -> None:
+        membership_type = BungieMembershipType.TigerSteam
+        membership_id = 4611686018483530949
+        instance_id = 6917529203966197229
+        components = [
+            DestinyComponentType.ItemCommonData,
+            DestinyComponentType.ItemInstances,
+            DestinyComponentType.ItemObjectives,
+            DestinyComponentType.ItemPerks,
+            DestinyComponentType.ItemRenderData,
+            DestinyComponentType.ItemStats,
+            DestinyComponentType.ItemTalentGrids,
+            DestinyComponentType.ItemSockets,
+            DestinyComponentType.ItemReusablePlugs,
+            DestinyComponentType.ItemPlugObjectives,
+        ]
+
+        sync_r = self.sync_client.destiny2.get_item(
+            destiny_membership_id=membership_id,
+            item_instance_id=instance_id,
+            membership_type=membership_type,
+            components=components,
+        )
+        async_r = await self.async_client.destiny2.get_item(
+            destiny_membership_id=membership_id,
+            item_instance_id=instance_id,
+            membership_type=membership_type,
+            components=components,
+        )
+        assert sync_r == async_r
+        print('GetItem: OK')
+
+    """
+    async def test_get_vendors(self) -> None:
+        membership_type = BungieMembershipType.TigerSteam
+        membership_id = 4611686018483530949
+        character_id = 2305843009402927792
+        components = [
+            DestinyComponentType.Vendors,
+            DestinyComponentType.VendorCategories,
+            DestinyComponentType.VendorSales,
+            DestinyComponentType.CurrencyLookups,
+            DestinyComponentType.StringVariables,
+        ]
+        filter = DestinyVendorFilter.None_
+
+        sync_r = self.sync_client.destiny2.get_vendors(
+            character_id=character_id,
+            destiny_membership_id=membership_id,
+            membership_type=membership_type,
+            components=components,
+            filter=filter,
+        )
+        async_r = await self.async_client.destiny2.get_vendors(
+            character_id=character_id,
+            destiny_membership_id=membership_id,
+            membership_type=membership_type,
+            components=components,
+            filter=filter,
+        )
+        assert sync_r == async_r
+        print('GetVendors: OK')
+
+    async def test_get_vendor(self) -> None:
+        membership_type = BungieMembershipType.TigerSteam
+        membership_id = 4611686018483530949
+        character_id = 2305843009402927792
+        components = [
+            DestinyComponentType.Vendors,
+            DestinyComponentType.VendorCategories,
+            DestinyComponentType.VendorSales,
+            DestinyComponentType.CurrencyLookups,
+            DestinyComponentType.StringVariables,
+        ]
+        vendor_hash = 672118013
+
+        sync_r = self.sync_client.destiny2.get_vendor(
+            destiny_membership_id=membership_id,
+            membership_type=membership_type,
+            character_id=character_id,
+            components=components,
+            vendor_hash=vendor_hash,
+        )
+        async_r = await self.async_client.destiny2.get_vendor(
+            destiny_membership_id=membership_id,
+            membership_type=membership_type,
+            character_id=character_id,
+            components=components,
+            vendor_hash=vendor_hash,
+        )
+        assert sync_r == async_r
+        print('GetVendor: OK')
+    """
+
+    async def test_get_public_vendors(self) -> None:
+        components = [
+            DestinyComponentType.Vendors,
+            DestinyComponentType.VendorCategories,
+            DestinyComponentType.VendorSales,
+            DestinyComponentType.StringVariables,
+        ]
+
+        sync_r = self.sync_client.destiny2.get_public_vendors(components)
+        async_r = await self.async_client.destiny2.get_public_vendors(components)
+        assert sync_r.Response.vendors == async_r.Response.vendors
+        print('GetPublicVendors: OK')
+
+    async def test_get_collectible_node_details(self) -> None:
+        membership_type = BungieMembershipType.TigerSteam
+        membership_id = 4611686018483530949
+        character_id = 2305843009402927792
+        presentation_node_hash = 2174985928
+        components = [DestinyComponentType.Collectibles]
+
+        sync_r = self.sync_client.destiny2.get_collectible_node_details(
+            destiny_membership_id=membership_id,
+            membership_type=membership_type,
+            character_id=character_id,
+            collectible_presentation_node_hash=presentation_node_hash,
+            components=components,
+        )
+        async_r = await self.async_client.destiny2.get_collectible_node_details(
+            destiny_membership_id=membership_id,
+            membership_type=membership_type,
+            character_id=character_id,
+            collectible_presentation_node_hash=presentation_node_hash,
+            components=components,
+        )
+        assert sync_r == async_r
+        print('GetCollectibleNodeDetails: OK')
+
+    async def test_get_post_game_carnage_report(self) -> None:
+        activity_id = 12272982816
+
+        sync_r = self.sync_client.destiny2.get_post_game_carnage_report(activity_id)
+        async_r = await self.async_client.destiny2.get_post_game_carnage_report(activity_id)
+
+        assert sync_r == async_r
+        print('GetPostGameCarnageReport: OK')
+
+    async def test_get_historical_stats_definition(self) -> None:
+        sync_r = self.sync_client.destiny2.get_historical_stats_definition()
+        async_r = await self.async_client.destiny2.get_historical_stats_definition()
+        assert sync_r == async_r
+        print('TestGetHistoricalStatsDefinition: OK')
+
+    async def test_get_clan_leaderboards(self) -> None:
+        group_id = 2603136
+        max_top = 10
+        modes = DestinyActivityModeType.Raid
+        stat_id = None
+
+        sync_r = self.sync_client.destiny2.get_clan_leaderboards(
+            group_id=group_id,
+            maxtop=max_top,
+            modes=modes.name,
+            statid=stat_id,
+        )
+        async_r = await self.async_client.destiny2.get_clan_leaderboards(
+            group_id=group_id,
+            maxtop=max_top,
+            modes=modes.name,
+            statid=stat_id,
+        )
+        assert sync_r == async_r
+        print('GetClanLeaderboards: OK')
+
+    async def test_get_clan_aggregate_stats(self) -> None:
+        group_id = 2603136
+        modes = DestinyActivityModeType.Raid
+
+        sync_r = self.sync_client.destiny2.get_clan_aggregate_stats(group_id=group_id, modes=modes.name)
+        async_r = await self.async_client.destiny2.get_clan_aggregate_stats(group_id=group_id, modes=modes.name)
+        assert sync_r == async_r
+        print('GetClanAggregateStats: OK')
+
+    """
+    async def test_get_leaderboards(self) -> None:
+        membership_type = BungieMembershipType.TigerSteam
+        membership_id = 4611686018483530949
+        max_top = 10
+        modes = DestinyActivityModeType.Raid
+        stat_id = None
+
+        sync_r = self.sync_client.destiny2.get_leaderboards(
+            destiny_membership_id=membership_id,
+            membership_type=membership_type,
+            maxtop=max_top,
+            modes=modes.name,
+            statid=stat_id,
+        )
+        async_r = await self.async_client.destiny2.get_leaderboards(
+            destiny_membership_id=membership_id,
+            membership_type=membership_type,
+            maxtop=max_top,
+            modes=modes.name,
+            statid=stat_id,
+        )
+        assert async_r == sync_r
+        print('GetLeaderboards: OK')
+    """
+
+    """
+    async def test_get_leaderboards_for_character(self) -> None:
+        character_id = 2305843009402927792
+        membership_id = 4611686018483530949
+        membership_type = BungieMembershipType.TigerSteam
+        max_top = 10
+        modes = DestinyActivityModeType.Raid
+        stat_id = None
+
+        sync_r = self.sync_client.destiny2.get_leaderboards_for_character(
+            character_id=character_id,
+            destiny_membership_id=membership_id,
+            membership_type=membership_type,
+            maxtop=max_top,
+            modes=modes.name,
+            statid=stat_id,
+        )
+        async_r = await self.async_client.destiny2.get_leaderboards_for_character(
+            character_id=character_id,
+            destiny_membership_id=membership_id,
+            membership_type=membership_type,
+            maxtop=max_top,
+            modes=modes.name,
+            statid=stat_id,
+        )
+
+        assert sync_r == async_r
+        print('GetLeaderboardsForCharacter: OK')
+    """
+
+    async def test_search_destiny_entities(self) -> None:
+        s_type = 'DestinyInventoryItemDefinition'
+        term = 'le monarque'
+        page = 0
+
+        sync_r = self.sync_client.destiny2.search_destiny_entities(
+            search_term=term,
+            type=s_type,
+            page=page,
+        )
+        async_r = await self.async_client.destiny2.search_destiny_entities(
+            search_term=term,
+            type=s_type,
+            page=page,
+        )
+        assert sync_r == async_r
+        print('SearchDestinyEntities: OK')
+
+    async def test_get_historical_stats(self) -> None:
+        membership_type = BungieMembershipType.TigerSteam
+        membership_id = 4611686018483530949
+        character_id = 2305843009402927792
+
+        sync_r = self.sync_client.destiny2.get_historical_stats(
+            membership_type=membership_type,
+            destiny_membership_id=membership_id,
+            character_id=character_id,
+        )
+        async_r = await self.async_client.destiny2.get_historical_stats(
+            membership_type=membership_type,
+            destiny_membership_id=membership_id,
+            character_id=character_id,
+        )
+        assert sync_r == async_r
+        print('GetHistoricalStats: OK')
+
+    async def test_get_historical_stats_for_account(self) -> None:
+        membership_type = BungieMembershipType.TigerSteam
+        membership_id = 4611686018483530949
+
+        sync_r = self.sync_client.destiny2.get_historical_stats_for_account(
+            destiny_membership_id=membership_id,
+            membership_type=membership_type,
+        )
+        async_r = await self.async_client.destiny2.get_historical_stats_for_account(
+            destiny_membership_id=membership_id,
+            membership_type=membership_type,
+        )
+        assert async_r == sync_r
+        print('GetHistoricalStatsForAccount: OK')
+
+    async def test_get_activity_history(self) -> None:
+        membership_type = BungieMembershipType.TigerSteam
+        membership_id = 4611686018483530949
+        character_id = 2305843009402927792
+        count = 5
+        mode = DestinyActivityModeType.Raid
+        page = 0
+
+        sync_r = self.sync_client.destiny2.get_activity_history(
+            destiny_membership_id=membership_id,
+            membership_type=membership_type,
+            character_id=character_id,
+            count=count,
+            mode=mode,
+            page=page,
+        )
+        async_r = await self.async_client.destiny2.get_activity_history(
+            destiny_membership_id=membership_id,
+            membership_type=membership_type,
+            character_id=character_id,
+            count=count,
+            mode=mode,
+            page=page,
+        )
+        assert sync_r == async_r
+        print('GetActivityHistory: OK')
+
+    async def test_get_unique_weapon_history(self) -> None:
+        membership_type = BungieMembershipType.TigerSteam
+        membership_id = 4611686018483530949
+        character_id = 2305843009402927792
+
+        sync_r = self.sync_client.destiny2.get_unique_weapon_history(
+            destiny_membership_id=membership_id,
+            membership_type=membership_type,
+            character_id=character_id,
+        )
+        async_r = await self.async_client.destiny2.get_unique_weapon_history(
+            destiny_membership_id=membership_id,
+            membership_type=membership_type,
+            character_id=character_id,
+        )
+        assert sync_r == async_r
+        print('GetUniqueWeaponHistory: OK')
+
+    async def test_get_destiny_aggregate_activity_stats(self) -> None:
+        membership_type = BungieMembershipType.TigerSteam
+        membership_id = 4611686018483530949
+        character_id = 2305843009402927792
+
+        sync_r = self.sync_client.destiny2.get_destiny_aggregate_activity_stats(
+            destiny_membership_id=membership_id,
+            membership_type=membership_type,
+            character_id=character_id,
+        )
+        async_r = await self.async_client.destiny2.get_destiny_aggregate_activity_stats(
+            destiny_membership_id=membership_id,
+            membership_type=membership_type,
+            character_id=character_id,
+        )
+        assert sync_r == async_r
+        print('GetDestinyAggregateActivityStats: OK')
+
+    async def test_get_public_milestone_content(self) -> None:
+        milestone_hash = 4253138191
+
+        sync_r = self.sync_client.destiny2.get_public_milestone_content(milestone_hash)
+        async_r = await self.async_client.destiny2.get_public_milestone_content(milestone_hash)
+
+        assert sync_r == async_r
+        print('GetPublicMilestoneContent: OK')
+
+    async def test_get_public_milestones(self) -> None:
+        sync_r = self.sync_client.destiny2.get_public_milestones()
+        async_r = await self.async_client.destiny2.get_public_milestones()
+
+        assert sync_r == async_r
+        print('GetPublicMilestones: OK')
 
 
 if __name__ == "__main__":
-    tests = {
-        'APP': TestApp.suite(),
-        'USER': TestUser.suite(),
-        'CONTENT': TestContent.suite(),
-        'FORUM': TestForum.suite(),
-        'GROUPV2': TestGroupV2.suite(),
-        'TOKENS': TestTokens.suite(),
-        'DESTINY2': TestDestiny2.suite(),
-    }
-
-    for name, test in tests.items():
-        print(f' {name} TESTS '.center(100, '='))
-        unittest.TextTestRunner().run(test)
+    TestApp.run_test()
+    TestUser.run_test()
+    TestContent.run_test()
+    TestForum.run_test()
+    TestForum.run_test()
+    TestGroupV2.run_test()
+    TestTokens.run_test()
+    TestDestiny2.run_test()
 
     # unittest.main()
