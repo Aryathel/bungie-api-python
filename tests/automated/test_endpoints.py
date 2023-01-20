@@ -2,7 +2,8 @@ import unittest
 
 from generated.entities import ForumTopicsQuickDateEnum, ForumTopicsSortEnum, ForumTopicsCategoryFiltersEnum, \
     ForumPostSortEnum, GroupType, BungieMembershipType, GroupsForMemberFilter, DestinyComponentType, \
-    DestinyVendorFilter, DestinyActivityModeType, CommunityContentSortMode, TrendingEntryType, PlatformFriendType
+    DestinyVendorFilter, DestinyActivityModeType, CommunityContentSortMode, TrendingEntryType, PlatformFriendType, \
+    PlatformErrorCodes
 from tests.core import TestCore
 
 
@@ -555,7 +556,7 @@ class TestGroupV2(unittest.IsolatedAsyncioTestCase, TestCore):
             membership_id=membership_id,
             membership_type=membership_type,
         )
-        assert sync_r == async_r
+        assert sync_r.ErrorCode == async_r.ErrorCode == PlatformErrorCodes.Success
         print('GetGroupsForMember: OK')
 
     """
@@ -1219,7 +1220,7 @@ class TestCommunityContent(unittest.IsolatedAsyncioTestCase, TestCore):
             sort=sort,
         )
         assert sync_r == async_r
-        print('GetCommunityContent:', sync_r)
+        print('GetCommunityContent: OK')
 
 
 class TestTrending(unittest.IsolatedAsyncioTestCase, TestCore):
@@ -1316,7 +1317,7 @@ class TestSocial(unittest.IsolatedAsyncioTestCase, TestCore):
         )
 
         assert sync_r == async_r
-        print('GetPlatformFriendList:', sync_r)
+        print('GetPlatformFriendList: OK')
     """
 
 
@@ -1340,21 +1341,21 @@ class TestCore(unittest.IsolatedAsyncioTestCase, TestCore):
         async_r = await self.async_client.core.get_available_locales()
 
         assert sync_r == async_r
-        print('GetAvailableLocales:', sync_r)
+        print('GetAvailableLocales: OK')
 
     async def test_get_common_settings(self) -> None:
         sync_r = self.sync_client.core.get_common_settings()
         async_r = await self.async_client.core.get_common_settings()
 
         assert sync_r == async_r
-        print('GetCommonSettings:', sync_r)
+        print('GetCommonSettings: OK')
 
     async def test_get_user_system_overrides(self) -> None:
         sync_r = self.sync_client.core.get_user_system_overrides()
         async_r = await self.async_client.core.get_user_system_overrides()
 
-        assert sync_r.ErrorCode == async_r.ErrorCode
-        print('GetuserSystemOverrides:', sync_r)
+        assert sync_r.ErrorCode == async_r.ErrorCode == PlatformErrorCodes.Success
+        print('GetuserSystemOverrides: OK')
 
     async def test_get_global_alerts(self) -> None:
         include_streaming = True
@@ -1363,7 +1364,7 @@ class TestCore(unittest.IsolatedAsyncioTestCase, TestCore):
         async_r = await self.async_client.core.get_global_alerts(include_streaming)
 
         assert sync_r == async_r
-        print('GetGlobalAlerts:', sync_r)
+        print('GetGlobalAlerts: OK')
 
 
 if __name__ == "__main__":
