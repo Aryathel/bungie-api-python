@@ -34,6 +34,7 @@ class EntityImport:
 
             imp += ' import '
             imp += ', '.join(sorted(self.imports))
+            imp = StringUtils.wrap_import(imp)
         else:
             if self.relative:
                 imp = f'import .{self.name}{" as " + self.alias if self.alias else ""}'

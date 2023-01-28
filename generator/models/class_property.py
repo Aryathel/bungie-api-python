@@ -67,7 +67,7 @@ class ClassProperty:
         arg = 'mm_field='
 
         if self.dict:
-            arg += f'{PropertyType.object.mm_type}(keys={PropertyType(self.key_type).mm_type if not self.enum_key else "fields.Enum(" + self.key_type+ ", by_value=" + str(not self.byte_enum) + ")"}, values='
+            arg += f'{PropertyType.object.mm_type}(keys={PropertyType(self.key_type).mm_type if not self.enum_key else "fields.Enum(" + self.key_type+ ", by_value=" + str(not self.byte_enum and not self.enum_key) + ")"}, values='
         if self.list:
             arg += PropertyType.array.mm_type + '('
 
@@ -99,7 +99,7 @@ class ClassProperty:
             args.append('metadata=config(mm_field=UnionField(fields=[fields.Integer(), fields.String()]))')
         if self.forward_ref:
             args.append(f'metadata=config({self.forward_ref_mm_field})')
-        elif self.byte_enum:
+        elif self.byte_enum or self.enum_key:
             args.append(f'metadata=config({self.forward_ref_mm_field})')
 
         if args:

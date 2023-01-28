@@ -16,6 +16,17 @@ class StringUtils:
         else:
             return f'import {pkg}'
 
+    @classmethod
+    def wrap_import(cls, imp: str) -> str:
+        if len(imp) < cls.max_line_length:
+            return imp
+
+        lines = cls.split_text_with_backslash(imp, 6)
+        imp = lines[0] + ' \\\n'
+        for i, l in enumerate(lines[1:]):
+            imp += cls.indent_str(l, 1) + (' \\\n' if i < len(lines[1:])-1 else '')
+        return imp
+
     @staticmethod
     def gen_class_declaration(class_name: str, inheritance: list[str] | str = None) -> str:
         if not inheritance:
@@ -45,7 +56,7 @@ class StringUtils:
 
     @classmethod
     def indent_str(cls, content: str, depth: int):
-        return f'{cls.indent * depth}{content}'
+        return '\n'.join(f'{cls.indent * depth}{c}' if c else "" for c in content.split('\n'))
 
     @staticmethod
     def camel_to_snake(inp: str) -> str:
@@ -59,11 +70,39 @@ class StringUtils:
         inp = inp.split('\n')
         for line in inp:
             if len(line) + prefix_length > cls.max_line_length:
-                rind = line.rindex(' ')
-                while rind + prefix_length > cls.max_line_length:
-                    rind = line.rindex(' ', 0, rind)
-                lines.append(line[:rind])
-                lines += cls.split_text_for_wrapping(line[rind+1:], prefix_length)
+                try:
+                    rind = line.rindex(' ')
+                    while rind + prefix_length > cls.max_line_length:
+                        try:
+                            rind = line.rindex(' ', 0, rind)
+                        except ValueError:
+                            break
+                    lines.append(line[:rind])
+                    lines += cls.split_text_for_wrapping(line[rind + 1:], prefix_length)
+                except ValueError:
+                    lines.append(line)
+            else:
+                lines.append(line)
+        return lines
+
+    @classmethod
+    def split_text_with_backslash(cls, inp: str, prefix_length: int = 0) -> list[str]:
+        lines = []
+        inp = inp.split('\n')
+        prefix_length += 2
+        for line in inp:
+            if len(line) + prefix_length > cls.max_line_length:
+                try:
+                    rind = line.rindex(' ')
+                    while rind + prefix_length > cls.max_line_length:
+                        try:
+                            rind = line.rindex(' ', 0, rind)
+                        except ValueError:
+                            break
+                    lines.append(line[:rind])
+                    lines += cls.split_text_for_wrapping(line[rind + 1:], prefix_length)
+                except ValueError:
+                    lines.append(line)
             else:
                 lines.append(line)
         return lines

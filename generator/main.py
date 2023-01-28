@@ -5,7 +5,9 @@ from typing import Optional
 import requests
 from alive_progress import alive_bar
 
-from generator.models.client import Client
+from generator.models.openapi.response import Response
+from .models.client import Client
+from .models.manifest_table import ManifestClient
 from .models.endpoints import EndpointCollection
 from .models.entity import EntityCollection
 from .models.enum_class import EnumCollection
@@ -13,7 +15,6 @@ from .utils.str_utils import StringUtils
 from .models.entity_import import EntityImport, EntityImportCollection
 from .models.enums import ImportType, PropertyType
 from .models.openapi.open_api import OpenApi
-
 
 open_api_spec = "https://raw.githubusercontent.com/Bungie-net/api/master/openapi.json"
 
@@ -23,6 +24,7 @@ class APIGenerator:
     generated_path = './generated'
     entities_path_name = 'entities'
     endpoints_path_name = 'endpoints'
+    manifest_path_name = 'manifest_tables'
     utils_path_name = 'utils'
     file_extension = '.py'
 
@@ -79,6 +81,7 @@ class APIGenerator:
         self.enums = EnumCollection()
         self.entities = EntityCollection()
         self.responses = EntityCollection()
+        self.manifest = ManifestClient()
         self.endpoints = {}
         self.clients = []
 
@@ -145,12 +148,12 @@ class APIGenerator:
             entity_init.write(content)
 
         with open(
-            os.path.join(
-                self.generated_path,
-                self.endpoints_path_name,
-                '__init__.py',
-            ),
-            'w+',
+                os.path.join(
+                    self.generated_path,
+                    self.endpoints_path_name,
+                    '__init__.py',
+                ),
+                'w+',
         ) as endpoint_init:
             imports = EntityImportCollection()
             names = []
@@ -170,9 +173,35 @@ class APIGenerator:
 
             endpoint_init.write(content)
 
+        with open(
+                os.path.join(
+                    self.generated_path,
+                    self.manifest_path_name,
+                    '__init__.py',
+                ),
+                'w+',
+        ) as manifest_init:
+            imports = EntityImportCollection()
+            names = []
+            for table in self.manifest:
+                imports.add_collection(table.init_imports)
+                names.append(table.sync_name)
+                names.append(table.async_name)
+            content = StringUtils.gen_line_break_comment('MANIFEST TABLE IMPORTS')
+            content += '\n'
+            content += '\n'.join(i.import_string for i in imports.imports_sorted)
+            content += '\n\n\n'
+            content += '__all__ = ' + json.dumps(
+                names,
+                indent=2,
+            )
+            content += '\n'
+
+            manifest_init.write(content)
+
         with open(os.path.join(self.generated_path, '__init__.py'), 'w+') as client_init:
-            names = [c.name for c in self.clients]
-            imports = [c.init_string for c in self.clients]
+            names = [c.name for c in self.clients] + [self.manifest.file_name_sync, self.manifest.file_name_async]
+            imports = [c.init_string for c in self.clients] + self.manifest.init_strings
 
             content = StringUtils.gen_line_break_comment('CLIENT IMPORTS')
             content += '\n'
@@ -220,11 +249,65 @@ class APIGenerator:
 
         # Process component schemas
         with alive_bar(
-                len(self.spec.components.responses),
+                len(self.spec.components.responses) + len([e for e in self.entities if e.is_manifest_definition]),
                 force_tty=True,
                 title='RESPONSES',
                 title_length=12
         ) as bar:
+            manifest_response_schemas: dict[str, Response] = {}
+
+            for entity in self.entities:
+                if entity.is_manifest_definition:
+                    manifest_response_schemas[entity.name_safe + 'Response'] = Response.schema().load({
+                        "description": "Look at the Response property for more information about the nature of this response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "Response": {
+                                            "$ref": f"#/components/schemas/{entity.qualified_name}"
+                                        },
+                                        "ErrorCode": {
+                                            "type": "integer",
+                                            "format": "int32",
+                                            "x-enum-reference": {
+                                                "$ref": "#/components/schemas/Exceptions.PlatformErrorCodes"
+                                            },
+                                            "x-enum-is-bitmask": False
+                                        },
+                                        "ThrottleSeconds": {
+                                            "type": "integer",
+                                            "format": "int32"
+                                        },
+                                        "ErrorStatus": {
+                                            "type": "string"
+                                        },
+                                        "Message": {
+                                            "type": "string"
+                                        },
+                                        "MessageData": {
+                                            "type": "object",
+                                            "additionalProperties": {
+                                                "type": "string"
+                                            },
+                                            "x-dictionary-key": {
+                                                "type": "string"
+                                            }
+                                        },
+                                        "DetailedErrorTrace": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    })
+
+            for k, response in manifest_response_schemas.items():
+                self.responses.add_response(k, response)
+                bar()
+
             for k, response in self.spec.components.responses.items():
                 if PropertyType(response.content['application/json'].schema.type) in (PropertyType.object, PropertyType.array):
                     self.responses.add_response(k, response)
@@ -272,17 +355,18 @@ class APIGenerator:
 
         # Create client classes for async and async
         with alive_bar(
-            2,
-            force_tty=True,
-            title='CLIENTS',
-            title_length=12,
+                2,
+                force_tty=True,
+                title='CLIENTS',
+                title_length=12,
         ) as bar:
             sync_client = Client(
                 False,
                 self.api_key_var,
                 self.api_key_header,
                 self.oauth_url,
-                list(self.endpoints.values())
+                list(self.endpoints.values()),
+                self.manifest,
             )
             sync_client.write_file(self.generated_path)
             self.clients.append(sync_client)
@@ -293,7 +377,8 @@ class APIGenerator:
                 self.api_key_var,
                 self.api_key_header,
                 self.oauth_url,
-                list(self.endpoints.values())
+                list(self.endpoints.values()),
+                self.manifest,
             )
             async_client.write_file(self.generated_path)
             self.clients.append(async_client)
@@ -344,7 +429,8 @@ class APIGenerator:
 
             # Union field utils
             with open(
-                    os.path.join(self.generated_path, self.utils_path_name, self.union_field_file + self.file_extension),
+                    os.path.join(self.generated_path, self.utils_path_name,
+                                 self.union_field_file + self.file_extension),
                     'w+'
             ) as f:
                 imports = EntityImportCollection([
@@ -388,10 +474,12 @@ class APIGenerator:
                 content += StringUtils.indent_str('**kwargs\n', 2)
                 content += StringUtils.indent_str('):\n', 1)
                 content += StringUtils.indent_str('self._candidate_fields = fields\n', 2)
-                content += StringUtils.indent_str('self._reverse_serialize_candidates = reverse_serialize_candidates\n', 2)
+                content += StringUtils.indent_str('self._reverse_serialize_candidates = reverse_serialize_candidates\n',
+                                                  2)
                 content += StringUtils.indent_str('super().__init__(**kwargs)\n', 2)
                 content += '\n'
-                content += StringUtils.indent_str('def _serialize(self, value: t.Any, attr: str, obj: str, **kwargs):\n', 1)
+                content += StringUtils.indent_str(
+                    'def _serialize(self, value: t.Any, attr: str, obj: str, **kwargs):\n', 1)
                 content += StringUtils.gen_docstring(
                     'Pulls the value for the given key from the object, applies the '
                     'field\'s formatting and returns the result.',
@@ -425,7 +513,8 @@ class APIGenerator:
                 content += StringUtils.indent_str('errors = []\n', 2)
                 content += StringUtils.indent_str('for candidate_field in self._candidate_fields:\n', 2)
                 content += StringUtils.indent_str('try:\n', 3)
-                content += StringUtils.indent_str('return candidate_field.deserialize(value, attr, data, **kwargs)\n', 4)
+                content += StringUtils.indent_str('return candidate_field.deserialize(value, attr, data, **kwargs)\n',
+                                                  4)
                 content += StringUtils.indent_str('except marshmallow.exceptions.ValidationError as exc:\n', 3)
                 content += StringUtils.indent_str('errors.append(exc.messages)\n', 4)
                 content += StringUtils.indent_str(
@@ -437,8 +526,8 @@ class APIGenerator:
             bar()
 
             with open(
-                os.path.join(self.generated_path, self.utils_path_name, self.oauth_util_file + self.file_extension),
-                'w+'
+                    os.path.join(self.generated_path, self.utils_path_name, self.oauth_util_file + self.file_extension),
+                    'w+'
             ) as f:
                 imports = EntityImportCollection([
                     EntityImport(name='datetime', type=ImportType.stdlib, imports=['datetime', 'timedelta']),
@@ -561,14 +650,21 @@ class APIGenerator:
             bar()
 
             with open(
-                os.path.join(self.generated_path, self.utils_path_name, self.exceptions_file + self.file_extension),
-                'w+'
+                    os.path.join(self.generated_path, self.utils_path_name, self.exceptions_file + self.file_extension),
+                    'w+'
             ) as f:
-                imports = EntityImportCollection([EntityImport(
-                    name=f'.{self.entities_path_name}',
-                    type=ImportType.relative,
-                    imports=['PlatformErrorCodes'],
-                )])
+                imports = EntityImportCollection([
+                    EntityImport(
+                        name=f'.{self.entities_path_name}',
+                        type=ImportType.relative,
+                        imports=['PlatformErrorCodes'],
+                    ),
+                    EntityImport(
+                        name='marshmallow',
+                        type=ImportType.external,
+                        imports=['ValidationError']
+                    ),
+                ])
                 content = imports.formatted_imports
                 content += '\n'
 
@@ -585,19 +681,64 @@ class APIGenerator:
                 content += '\n'
                 content += StringUtils.indent_str(
                     'super().__init__(f\'[{method.upper()} {status_code} {url}]\\n'
-                    '\\t{error_code.value} {error_code.name} - {message}\')\n',
+                    '\\t{error_code.value} {error_code.name} - {message}\')\n\n\n',
                     2
                 )
+
+                content += StringUtils.gen_class_declaration(class_name='ManifestValidationError')
+                content += '\n'
+                content += StringUtils.gen_function_declaration('__init__', ['self'], 'None', depth=1)
+                content += '\n'
+                content += StringUtils.indent_str('self.errors = {}\n\n', 2)
+                content += StringUtils.gen_function_declaration(
+                    'add_error',
+                    ['self', 'name: str', 'err: list | dict'],
+                    'None',
+                    depth=1
+                )
+                content += '\n'
+                content += StringUtils.indent_str('if isinstance(err, list):\n', 2)
+                content += StringUtils.indent_str('if name not in self.errors:\n', 3)
+                content += StringUtils.indent_str('self.errors[name] = {}\n', 4)
+                content += StringUtils.indent_str('for e in err:\n', 3)
+                content += StringUtils.indent_str('if e not in self.errors[name]:\n', 4)
+                content += StringUtils.indent_str('self.errors[name][e] = 1\n', 5)
+                content += StringUtils.indent_str('else:\n', 4)
+                content += StringUtils.indent_str('self.errors[name][e] += 1\n', 5)
+                content += StringUtils.indent_str('elif isinstance(err, dict):\n', 2)
+                content += StringUtils.indent_str('for n, er in err.items():\n', 3)
+                content += StringUtils.indent_str('if isinstance(self.try_int(n), int):\n', 4)
+                content += StringUtils.indent_str('for k, err in er.items():\n', 5)
+                content += StringUtils.indent_str('self.add_error(f\'{name}.{k}\', err)\n', 6)
+                content += StringUtils.indent_str('else:\n', 4)
+                content += StringUtils.indent_str('self.add_error(f\'{name}.{n}\', er)\n\n', 5)
+
+                content += StringUtils.indent_str('@staticmethod\n', 1)
+                content += StringUtils.gen_function_declaration(
+                    func_name='try_int',
+                    params=['val'],
+                    depth=1
+                )
+                content += '\n'
+                content += StringUtils.indent_str('try:\n', 2)
+                content += StringUtils.indent_str('return int(val)\n', 3)
+                content += StringUtils.indent_str('except ValueError:\n', 2)
+                content += StringUtils.indent_str('return val\n\n', 3)
+
+                content += StringUtils.gen_function_declaration('raise_exception', ['self'], 'None', depth=1)
+                content += '\n'
+                content += StringUtils.indent_str('if self.errors:\n', 2)
+                content += StringUtils.indent_str('raise ValidationError(self.errors)\n', 3)
 
                 f.write(content)
             bar()
 
     def gen_security(self) -> None:
         with alive_bar(
-            len(self.spec.components.securitySchemes),
-            title='SECURITY',
-            force_tty=True,
-            title_length=12,
+                len(self.spec.components.securitySchemes),
+                title='SECURITY',
+                force_tty=True,
+                title_length=12,
         ) as bar:
             for name, scheme in self.spec.components.securitySchemes.items():
                 if name == 'oauth2':
@@ -622,6 +763,19 @@ class APIGenerator:
                     print(f'UNHANDLED SECURITY SCHEME: {name} - {scheme}')
                 bar()
 
+    def gen_manifest_clients(self) -> None:
+        with alive_bar(
+                len([e for e in self.entities if e.is_manifest_definition]),
+                title='MANIFEST',
+                force_tty=True,
+                title_length=12,
+        ) as bar:
+            for e in self.entities:
+                if e.is_manifest_definition:
+                    self.manifest.add_manifest_table(e)
+                    bar()
+            self.manifest.write(self.generated_path)
+
     def gen(self) -> None:
         self.process_namespace()
 
@@ -631,6 +785,7 @@ class APIGenerator:
         self.gen_responses()
         self.gen_endpoints()
         self.gen_security()
+        self.gen_manifest_clients()
         self.gen_clients()
         self.write_init()
 

@@ -3,6 +3,7 @@ import os
 from .endpoints import EndpointCollection
 from .entity_import import EntityImportCollection, EntityImport
 from .enums import ImportType
+from .manifest_table import ManifestClient
 from ..utils.str_utils import StringUtils
 
 
@@ -24,13 +25,15 @@ class Client:
             api_key_var: str,
             api_key_header: str,
             oauth_url: str,
-            endpoints: list[EndpointCollection]
+            endpoints: list[EndpointCollection],
+            manifest_client: ManifestClient,
     ):
         self.is_async = is_async
         self.endpoints = endpoints
         self.api_key_var = api_key_var
         self.api_key_header = api_key_header
         self.oauth_url = oauth_url
+        self.manifest_client = manifest_client
 
         self.imports = EntityImportCollection([
             EntityImport(
@@ -59,6 +62,11 @@ class Client:
                 name=self.entities_path_name,
                 type=ImportType.relative,
                 imports=['PlatformErrorCodes'],
+            ),
+            EntityImport(
+                name=self.manifest_client.file_name_async if is_async else self.manifest_client.file_name_sync,
+                type=ImportType.relative,
+                imports=[self.manifest_client.name_async if is_async else self.manifest_client.name_sync],
             ),
             EntityImport(name='datetime', type=ImportType.stdlib, imports=['datetime']),
         ])
@@ -313,7 +321,7 @@ class Client:
     def get_image_method(self) -> list[str]:
         items = [
             StringUtils.gen_function_declaration(
-                'get_image',
+                'get_file',
                 [
                     'self',
                     'path: str',
@@ -343,7 +351,9 @@ class Client:
                     'self',
                     f'{self.api_key_var}: str',
                     'client_id: Optional[int] = None',
-                    'client_secret: Optional[str] = None'
+                    'client_secret: Optional[str] = None',
+                    'manifest_update_interval_minutes: Optional[int] = None',
+                    'manifest_locale: Optional[str] = None',
                 ],
                 'None',
             ),
@@ -351,7 +361,17 @@ class Client:
             StringUtils.indent_str('raise ValueError(\'You must provide a valid API key.\')\n', 2),
             StringUtils.indent_str(f'self.{self.api_key_var} = {self.api_key_var}', 1),
             StringUtils.indent_str(f'self.client_id = client_id', 1),
-            StringUtils.indent_str(f'self.client_secret = client_secret\n', 1)
+            StringUtils.indent_str(f'self.client_secret = client_secret\n', 1),
+            StringUtils.indent_str(
+                f'self.manifest = '
+                f'{self.manifest_client.name_async if self.is_async else self.manifest_client.name_sync}'
+                f'(',
+                1,
+            ),
+            StringUtils.indent_str('bungie_client=self,', 2),
+            StringUtils.indent_str('update_interval_minutes=manifest_update_interval_minutes,', 2),
+            StringUtils.indent_str('locale=manifest_locale,', 2),
+            StringUtils.indent_str(')\n', 1),
         ]
         for e in self.endpoints:
             items.append(StringUtils.indent_str(

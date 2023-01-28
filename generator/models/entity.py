@@ -1,3 +1,5 @@
+from typing import Iterator
+
 from .enums import ImportType, PropertyType, PropertyFormat
 from .openapi.reference import Reference
 from .openapi.response import Response
@@ -66,6 +68,11 @@ class Entity:
     @property
     def is_manifest_definition(self) -> bool:
         return bool(self.schema.x_mobile_manifest_name)
+
+    @property
+    def manifest_name(self) -> str | None:
+        if self.is_manifest_definition:
+            return self.schema.x_mobile_manifest_name
 
     @property
     def name(self) -> str:
@@ -501,6 +508,12 @@ class Entity:
         else:
             print(f'UNHANDLED ENTITY TYPE: {self.name} - {self.schema}')
 
+        if self.is_manifest_definition:
+            self._add_property(ClassProperty(
+                name='blacklisted',
+                type='bool',
+                optional=True,
+            ))
 
 class ResponseEntity(Entity):
     responses_file_name = 'responses'
@@ -766,6 +779,7 @@ class EntityCollection:
     entities: list[Entity | ResponseEntity]
     imports: EntityImportCollection
     entities_with_extra = [
+        """
         'Queries.PagedQuery',
         'Forum.PostResponse',
 
@@ -782,12 +796,17 @@ class EntityCollection:
         'Destiny.Entities.Items.DestinyItemComponent',
 
         'Destiny.HistoricalStats.Definitions.DestinyHistoricalStatsDefinition',
+        """
     ]
 
     def __init__(self):
         self.entities = []
         self.imports = EntityImportCollection()
         self.exception_enum_entity = None
+
+    def __iter__(self) -> Iterator[Entity]:
+        for e in self.entities:
+            yield e
 
     @property
     def placeholder_names(self) -> list[str]:

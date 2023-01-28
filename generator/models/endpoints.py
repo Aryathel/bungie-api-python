@@ -116,7 +116,7 @@ class Endpoint:
     bungie_root_var = '{bungie_root}'
 
     response_type_overrides = {
-        'get_destiny_entity_definition': 'entity_type'
+        'get_destiny_entity_definition': 'entity_type + \'Response\''
     }
 
     def __init__(
@@ -809,12 +809,12 @@ class EndpointCollection:
             self.sync_imports.add_import(EntityImport(
                 name=f'.{self.entity_path_name}',
                 type=ImportType.relative,
-                imports=[e.name_safe for e in self.manifest_entities]
+                imports=[e.name_safe + 'Response' for e in self.manifest_entities]
             ))
             self.async_imports.add_import(EntityImport(
                 name=f'.{self.entity_path_name}',
                 type=ImportType.relative,
-                imports=[e.name_safe for e in self.manifest_entities]
+                imports=[e.name_safe + 'Response' for e in self.manifest_entities]
             ))
 
     @property
